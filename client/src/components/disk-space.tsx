@@ -3,8 +3,14 @@ import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { HardDrive, AlertTriangle } from "lucide-react";
 
+interface DiskStats {
+  used: number;
+  total: number;
+  free: number;
+}
+
 export function DiskSpace() {
-  const { data: diskStats } = useQuery({
+  const { data: diskStats } = useQuery<DiskStats>({
     queryKey: ['/api/stats/disk'],
     refetchInterval: 60000 // Refresh every minute
   });

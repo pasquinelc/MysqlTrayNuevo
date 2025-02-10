@@ -19,13 +19,13 @@ export function LogViewer() {
   useEffect(() => {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${protocol}//${window.location.host}/ws`;
-    
+
     function connect() {
       ws.current = new WebSocket(wsUrl);
 
       ws.current.onmessage = (event) => {
         if (isPaused) return;
-        
+
         const data = JSON.parse(event.data);
         if (data.type === 'LOG') {
           setLogs(prev => [...prev, data.log].slice(-1000)); // Keep last 1000 logs
@@ -71,7 +71,7 @@ export function LogViewer() {
             )}
             {isPaused ? "Resume" : "Pause"}
           </Button>
-          
+
           <Button
             variant="outline"
             size="sm"
@@ -99,7 +99,7 @@ export function LogViewer() {
               <Badge
                 variant={
                   log.level === 'error' ? 'destructive' :
-                  log.level === 'warn' ? 'warning' :
+                  log.level === 'warn' ? 'default' :
                   'secondary'
                 }
               >
