@@ -11,10 +11,10 @@ const execAsync = promisify(exec);
 export async function performBackup(config: BackupConfig): Promise<BackupLog> {
   const startTime = new Date();
   const backupDir = process.env.BACKUP_DIR || './backups';
-  
+
   try {
     await fs.mkdir(backupDir, { recursive: true });
-    
+
     const timestamp = startTime.toISOString().replace(/[:.]/g, '-');
     const filename = `${config.name}_${timestamp}.sql`;
     const gzFilename = `${filename}.gz`;
@@ -60,7 +60,7 @@ export async function performBackup(config: BackupConfig): Promise<BackupLog> {
       error: null,
       metadata: { stderr }
     };
-  } catch (error) {
+  } catch (error: any) { // Type assertion to fix TypeScript error
     return {
       id: 0,
       configId: config.id,
