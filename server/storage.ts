@@ -1,4 +1,7 @@
-import { type BackupConfig, type BackupLog, type Setting, users, type User, type InsertUser } from "@shared/schema";
+import { db } from "./db";
+import { eq, sql } from "drizzle-orm";
+import { backupConfigs, backupLogs, settings } from "@shared/schema";
+import type { BackupConfig, BackupLog, Setting } from "@shared/schema";
 
 export interface IStorage {
   getAllBackupConfigs(): Promise<BackupConfig[]>;
@@ -21,60 +24,39 @@ export interface IStorage {
   getSettings(): Promise<Setting[]>;
   getSetting(key: string): Promise<Setting | undefined>;
   setSetting(key: string, value: string): Promise<Setting>;
-
-  getUser(id: number): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
 }
 
-export class MemStorage implements IStorage {
-  private backupConfigs: Map<number, BackupConfig>;
-  private backupLogs: Map<number, BackupLog>;
-  private settings: Map<string, Setting>;
-  private users: Map<number, User>;
-  private currentConfigId: number;
-  private currentLogId: number;
-  private currentSettingId: number;
-  private currentId: number;
-
-  constructor() {
-    this.backupConfigs = new Map();
-    this.backupLogs = new Map();
-    this.settings = new Map();
-    this.users = new Map();
-    this.currentConfigId = 1;
-    this.currentLogId = 1;
-    this.currentSettingId = 1;
-    this.currentId = 1;
-  }
-
+export class DatabaseStorage implements IStorage {
   async getAllBackupConfigs(): Promise<BackupConfig[]> {
-    return Array.from(this.backupConfigs.values());
+    return await db.select().from(backupConfigs);
   }
 
   async getBackupConfig(id: number): Promise<BackupConfig | undefined> {
-    return this.backupConfigs.get(id);
+    const [config] = await db.select().from(backupConfigs).where(eq(backupConfigs.id, id));
+    return config;
   }
 
   async insertBackupConfig(config: Omit<BackupConfig, "id">): Promise<BackupConfig> {
-    const id = this.currentConfigId++;
-    const newConfig = { ...config, id } as BackupConfig;
-    this.backupConfigs.set(id, newConfig);
+    const [newConfig] = await db.insert(backupConfigs).values(config).returning();
     return newConfig;
   }
 
   async updateBackupConfig(id: number, updates: Partial<BackupConfig>): Promise<BackupConfig> {
-    const existing = this.backupConfigs.get(id);
-    if (!existing) {
+    const [updated] = await db
+      .update(backupConfigs)
+      .set(updates)
+      .where(eq(backupConfigs.id, id))
+      .returning();
+
+    if (!updated) {
       throw new Error(`Backup config ${id} not found`);
     }
-    const updated = { ...existing, ...updates };
-    this.backupConfigs.set(id, updated);
+
     return updated;
   }
 
   async getBackupLogs(): Promise<BackupLog[]> {
-    return Array.from(this.backupLogs.values());
+    return await db.select().from(backupLogs).orderBy(backupLogs.startTime);
   }
 
   async getBackupLogsByDate(date: Date): Promise<BackupLog[]> {
@@ -83,21 +65,19 @@ export class MemStorage implements IStorage {
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
 
-    return Array.from(this.backupLogs.values()).filter(log => {
-      const logDate = new Date(log.startTime);
-      return logDate >= startOfDay && logDate <= endOfDay;
-    });
+    return await db
+      .select()
+      .from(backupLogs)
+      .where(sql`${backupLogs.startTime} >= ${startOfDay} AND ${backupLogs.startTime} <= ${endOfDay}`);
   }
 
   async insertBackupLog(log: Omit<BackupLog, "id">): Promise<BackupLog> {
-    const id = this.currentLogId++;
-    const newLog = { ...log, id } as BackupLog;
-    this.backupLogs.set(id, newLog);
+    const [newLog] = await db.insert(backupLogs).values(log).returning();
     return newLog;
   }
 
   async getBackupStats() {
-    const logs = Array.from(this.backupLogs.values());
+    const logs = await this.getBackupLogs();
     const successful = logs.filter(l => l.status === 'completed');
     const totalSize = successful.reduce((sum, log) => sum + (log.fileSize || 0), 0);
 
@@ -106,48 +86,39 @@ export class MemStorage implements IStorage {
       successfulBackups: successful.length,
       failedBackups: logs.filter(l => l.status === 'failed').length,
       totalSize,
-      lastBackupTime: logs.length > 0 ? new Date(Math.max(...logs.map(l => new Date(l.startTime).getTime()))) : undefined
+      lastBackupTime: logs.length > 0 
+        ? new Date(Math.max(...logs.map(l => new Date(l.startTime).getTime())))
+        : undefined
     };
   }
 
   async getSettings(): Promise<Setting[]> {
-    return Array.from(this.settings.values());
+    return await db.select().from(settings);
   }
 
   async getSetting(key: string): Promise<Setting | undefined> {
-    return Array.from(this.settings.values()).find(s => s.key === key);
+    const [setting] = await db.select().from(settings).where(eq(settings.key, key));
+    return setting;
   }
 
   async setSetting(key: string, value: string): Promise<Setting> {
-    const existing = Array.from(this.settings.values()).find(s => s.key === key);
+    const existing = await this.getSetting(key);
+
     if (existing) {
-      const updated = { ...existing, value };
-      this.settings.set(existing.id.toString(), updated);
+      const [updated] = await db
+        .update(settings)
+        .set({ value })
+        .where(eq(settings.id, existing.id))
+        .returning();
       return updated;
     }
 
-    const id = this.currentSettingId++;
-    const newSetting = { id, key, value };
-    this.settings.set(id.toString(), newSetting);
+    const [newSetting] = await db
+      .insert(settings)
+      .values({ key, value })
+      .returning();
     return newSetting;
-  }
-
-  async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
-  }
-
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentId++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

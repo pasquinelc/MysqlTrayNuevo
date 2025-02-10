@@ -2,13 +2,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, CheckCircle, XCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import type { BackupLog } from "@shared/schema";
+
+interface BackupStats {
+  totalBackups: number;
+  successfulBackups: number;
+  failedBackups: number;
+  totalSize: number;
+  lastBackupTime?: Date;
+}
 
 export function BackupStatus() {
-  const { data: stats } = useQuery({
+  const { data: stats } = useQuery<BackupStats>({
     queryKey: ['/api/stats'],
   });
 
-  const { data: recentLogs } = useQuery({
+  const { data: recentLogs } = useQuery<BackupLog[]>({
     queryKey: ['/api/logs'],
     select: (logs) => logs.slice(0, 5),
   });
@@ -55,7 +64,10 @@ export function BackupStatus() {
                     {new Date(log.startTime).toLocaleString()}
                   </p>
                 </div>
-                <Badge variant={log.status === 'completed' ? 'success' : 'destructive'}>
+                <Badge 
+                  variant={log.status === 'completed' ? 'default' : 'destructive'}
+                  className={log.status === 'completed' ? 'bg-green-500' : undefined}
+                >
                   {log.status === 'completed' ? (
                     <CheckCircle className="w-4 h-4 mr-1" />
                   ) : (

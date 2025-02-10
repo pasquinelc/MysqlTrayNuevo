@@ -10,9 +10,10 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
+import type { BackupLog } from "@shared/schema";
 
 export function BackupHistory() {
-  const { data: logs } = useQuery({
+  const { data: logs } = useQuery<BackupLog[]>({
     queryKey: ['/api/logs'],
   });
 
@@ -34,7 +35,8 @@ export function BackupHistory() {
             <TableCell className="font-medium">{log.database}</TableCell>
             <TableCell>
               <Badge 
-                variant={log.status === 'completed' ? 'success' : 'destructive'}
+                variant={log.status === 'completed' ? 'default' : 'destructive'}
+                className={log.status === 'completed' ? 'bg-green-500' : undefined}
               >
                 {log.status}
               </Badge>
