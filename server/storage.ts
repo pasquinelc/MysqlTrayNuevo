@@ -28,7 +28,8 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   async getAllBackupConfigs(): Promise<BackupConfig[]> {
-    return await db.select().from(backupConfigs);
+    const results = await db.select().from(backupConfigs);
+    return results;
   }
 
   async getBackupConfig(id: number): Promise<BackupConfig | undefined> {
@@ -37,21 +38,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async insertBackupConfig(config: Omit<BackupConfig, "id">): Promise<BackupConfig> {
-    const [newConfig] = await db.insert(backupConfigs).values(config).returning();
-    return newConfig;
+    const [newConfig] = await db.insert(backupConfigs).values(config);
+    return { ...config, id: newConfig.insertId } as BackupConfig;
   }
 
   async updateBackupConfig(id: number, updates: Partial<BackupConfig>): Promise<BackupConfig> {
-    const [updated] = await db
-      .update(backupConfigs)
-      .set(updates)
-      .where(eq(backupConfigs.id, id))
-      .returning();
-
+    await db.update(backupConfigs).set(updates).where(eq(backupConfigs.id, id));
+    const [updated] = await db.select().from(backupConfigs).where(eq(backupConfigs.id, id));
     if (!updated) {
       throw new Error(`Backup config ${id} not found`);
     }
-
     return updated;
   }
 
@@ -72,8 +68,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async insertBackupLog(log: Omit<BackupLog, "id">): Promise<BackupLog> {
-    const [newLog] = await db.insert(backupLogs).values(log).returning();
-    return newLog;
+    const [result] = await db.insert(backupLogs).values(log);
+    return { ...log, id: result.insertId } as BackupLog;
   }
 
   async getBackupStats() {
@@ -105,19 +101,12 @@ export class DatabaseStorage implements IStorage {
     const existing = await this.getSetting(key);
 
     if (existing) {
-      const [updated] = await db
-        .update(settings)
-        .set({ value })
-        .where(eq(settings.id, existing.id))
-        .returning();
-      return updated;
+      await db.update(settings).set({ value }).where(eq(settings.key, key));
+      return { ...existing, value };
     }
 
-    const [newSetting] = await db
-      .insert(settings)
-      .values({ key, value })
-      .returning();
-    return newSetting;
+    const [result] = await db.insert(settings).values({ key, value });
+    return { id: result.insertId, key, value };
   }
 }
 
