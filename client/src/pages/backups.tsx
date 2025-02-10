@@ -26,7 +26,7 @@ import { apiRequest } from "@/lib/queryClient";
 import type { BackupConfig } from "@shared/schema";
 
 const configSchema = insertBackupConfigSchema.extend({
-  databases: z.string().transform(s => s.split(',').map(d => d.trim())),
+  databases: z.string().transform(s => s.split(',').map(d => d.trim()).filter(Boolean)),
 });
 
 export default function BackupsPage() {
@@ -92,7 +92,7 @@ export default function BackupsPage() {
                       <CardTitle>{config.name}</CardTitle>
                       <CardDescription>{config.databases.join(', ')}</CardDescription>
                     </div>
-                    <Switch checked={config.enabled} />
+                    <Switch checked={config.enabled ?? false} />
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -129,7 +129,14 @@ export default function BackupsPage() {
             </CardHeader>
             <CardContent>
               <Form {...form}>
-                <form onSubmit={form.handleSubmit((data) => createMutation.mutate(data))} className="space-y-4">
+                <form onSubmit={form.handleSubmit((data) => {
+                  const formData = {
+                    ...data,
+                    port: Number(data.port),
+                    retention: Number(data.retention)
+                  };
+                  createMutation.mutate(formData);
+                })} className="space-y-4">
                   <FormField
                     control={form.control}
                     name="name"
