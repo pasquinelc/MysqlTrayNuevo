@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<job-scheduling-data
+    xmlns="http://www.quartz-scheduler.org/xml/JobSchedulingData"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.quartz-scheduler.org/xml/JobSchedulingData http://www.quartz-scheduler.org/xml/job_scheduling_data_2_0.xsd"
+    version="2.0">
+    <pre-processing-commands>
+        <delete-jobs-in-group>*</delete-jobs-in-group>
+        <delete-triggers-in-group>*</delete-triggers-in-group>
+    </pre-processing-commands>
+    <processing-directives>
+        <overwrite-existing-data>true</overwrite-existing-data>
+        <ignore-duplicates>false</ignore-duplicates>
+    </processing-directives>
+    <schedule>
+        <job>
+            <name>MonitoreoTurbinux</name>
+            <job-class>com.turbinux.turbinux.jobs.MonitoreoTurbinux</job-class>
+        </job>
+        <job>
+            <name>EjecutaRespaldosMySQL</name>
+            <job-class>com.turbinux.turbinux.jobs.EjecutaRespaldosMySQL</job-class>
+        </job>        
+        <job>
+            <name>EjecutaRespaldosCarpeta</name>
+            <job-class>com.turbinux.turbinux.jobs.EjecutaRespaldosCarpeta</job-class>
+        </job>           
+        <job>
+            <name>EjecutaDRP</name>
+            <job-class>com.turbinux.turbinux.jobs.EjecutaDRP</job-class>
+        </job>             
+        <job>
+            <name>EjecutaDRPCopiaCarpetas</name>
+            <job-class>com.turbinux.turbinux.jobs.EjecutaDRPCopiaCarpetas</job-class>
+        </job>             
+        <trigger>
+            <cron>
+                <name>LosLunes</name>
+                <job-name>MonitoreoTurbinux</job-name>
+                <!-- todos los dias a las 08:00 am -->
+                <cron-expression>0 0 8 * * ?</cron-expression>
+            </cron>            
+        </trigger>
+        <trigger>
+            <cron>
+                <name>TodosLosDiasALaUna</name>
+                <job-name>EjecutaRespaldosMySQL</job-name>
+                <!-- todos los dias 01:00 am -->
+                <cron-expression>0 0 1 * * ?</cron-expression>
+            </cron>
+        </trigger> 
+        <trigger>
+            <cron>
+                <name>LosDiasDos</name>
+                <job-name>EjecutaDRPCopiaCarpetas</job-name>
+                <!-- todos los dias dos a las 02:00 am -->
+                <cron-expression>0 0 2 2 * ?</cron-expression>
+            </cron>
+        </trigger>           
+        <trigger>
+            <cron>
+                <name>LosDiasPrimero</name>
+                <job-name>EjecutaRespaldosCarpeta</job-name>
+                <!-- todos los dias primero a las 02:00 am -->
+                <cron-expression>0 0 2 1 * ?</cron-expression>
+            </cron>
+        </trigger>    
+        <trigger>
+            <cron>
+                <name>TodosLosDiasALasOchoAM</name>
+                <job-name>EjecutaDRP</job-name>
+                <!-- todos los dias 04:00 am -->
+                <cron-expression>0 0 4 * * ?</cron-expression>
+            </cron>
+        </trigger>                   
+    </schedule>
+</job-scheduling-data>

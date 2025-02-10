@@ -1,0 +1,118 @@
+package com.turbinux.util;
+
+import com.turbinux.turbinux.modelo.beans.sencillos.CorreoMonitoreo;
+import com.turbinux.turbinux.modelo.beans.sencillos.Revision;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.ResourceBundle;
+import org.apache.log4j.Logger;
+
+public class Base {
+
+    private static final String DRIVER = ResourceBundle.getBundle(Constantes.PROPERTIES).getString("DRIVER");
+    private static final String URL = ResourceBundle.getBundle(Constantes.PROPERTIES).getString("URL");
+    private static final String USUARIO = ResourceBundle.getBundle(Constantes.PROPERTIES).getString("USUARIO");
+    private static final String PASSWORD = ResourceBundle.getBundle(Constantes.PROPERTIES).getString("PASSWORD");
+    private static volatile Connection con = null;
+    private static final Logger log = Logger.getLogger(Base.class);
+
+    public static Connection obtieneConexion() {
+        try {
+            if (con == null || con.isClosed()) {
+                Class.forName(DRIVER);
+                con = DriverManager.getConnection(URL, USUARIO, PASSWORD);
+                log.debug("-----------conectando----------");
+            }
+        } catch (SQLException | ClassNotFoundException e) {
+            log.error(e);
+        }
+        return con;
+    }
+
+    public static void cierraConexion() {
+        try {
+            if (con != null && !con.isClosed()) {
+                con.close();
+                log.debug("-----------desconectando----------");
+            }
+        } catch (SQLException e) {
+            log.error(e);
+        }
+    }
+
+    public static String fechaBase() {
+        String fecha = "2008-01-01";
+
+        obtieneConexion();
+        String sql = "SELECT CURRENT_DATE() AS FECHA";
+        try (PreparedStatement ps = con.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                fecha = rs.getString("FECHA");
+            }
+        } catch (Exception e) {
+            log.error(e);
+        }
+        cierraConexion();
+        return fecha;
+    }
+
+    public static String horaBase() {
+        String hora = "00:00";
+
+        obtieneConexion();
+        String sql = "SELECT CURRENT_TIME() AS HORA";
+        try (PreparedStatement ps = con.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                hora = rs.getString("HORA");
+            }
+        } catch (SQLException e) {
+            log.error(e);
+        }
+
+        if (hora != null && hora.length() > 5) {
+            hora = hora.substring(0, 5);
+        }
+        cierraConexion();
+        return hora;
+    }
+
+    public static List<Revision> listaRevision() {
+        List<Revision> lista = new ArrayList<>();
+
+        String sql = "SELECT * FROM REVISION ORDER BY NOMBRE,PUERTO";
+        log.debug(sql);
+        obtieneConexion();
+        try (PreparedStatement ps = con.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                lista.add(new Revision(rs.getInt("IDREVISION"), rs.getString("NOMBRE"), rs.getString("HOST"), rs.getInt("PUERTO")));
+            }
+
+        } catch (SQLException e) {
+            log.error(e);
+        }
+        cierraConexion();
+        return lista;
+    }
+
+    public static List<CorreoMonitoreo> listaCorreosMonitoreo() {
+        List<CorreoMonitoreo> lista = new ArrayList<>();
+
+        String sql = "SELECT * FROM CORREOMONITOREO ORDER BY NOMBRE";
+        log.debug(sql);
+        obtieneConexion();
+        try (PreparedStatement ps = con.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                lista.add(new CorreoMonitoreo(rs.getInt("IDCORREOMONITOREO"), rs.getString("NOMBRE"), rs.getString("CORREO")));
+            }
+        } catch (SQLException e) {
+            log.error(e);
+        }
+        cierraConexion();
+        return lista;
+    }
+}

@@ -1,0 +1,366 @@
+package com.turbinux.turbinux.jobs;
+
+import com.turbinux.turbinux.modelo.beans.sencillos.BitacoraRespaldoMySQL;
+import com.turbinux.turbinux.modelo.beans.sencillos.CorreoMonitoreo;
+import com.turbinux.turbinux.modelo.beans.sencillos.RespaldoMySQL;
+import com.turbinux.turbinux.modelo.services.sencillos.BitacoraRespaldoMySQLService;
+import com.turbinux.util.Base;
+import com.turbinux.util.Constantes;
+import com.turbinux.util.EnvioCorreoElectronico;
+import com.turbinux.util.Utilerias;
+import com.turbinux.util.UtileriasZipArchivo;
+import org.apache.log4j.Logger;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.ResourceBundle;
+import org.quartz.Job;
+import org.quartz.JobExecutionContext;
+import org.quartz.JobExecutionException;
+
+/**
+ * Esta clase es un job que se ejecuta por medio de Quartz y efectua los
+ * respaldos de MySQL
+ *
+ * @author javier.torres
+ */
+public class EjecutaRespaldosMySQL implements Job {
+
+    private static final Logger LOG = Logger.getLogger(EjecutaRespaldosMySQL.class.getName());
+    private final String RESPADOS_MYSQL_ACTIVO = ResourceBundle.getBundle(Constantes.PROPERTIES).getString("RESPADOS_MYSQL_ACTIVO");
+
+    public static void main(String[] args) {
+        ejecutaRespaldoArthas();
+    }
+
+    @Override
+    public void execute(JobExecutionContext context) throws JobExecutionException {
+        if (RESPADOS_MYSQL_ACTIVO.equals("1")) {
+            ejecutaRespaldoTodos();
+        }
+    }
+
+    public static boolean ejecutaRespaldoTodos() {
+        ResourceBundle properties = ResourceBundle.getBundle("turbinux");
+        boolean respaldoexitoso = true;
+
+        String DRIVER = properties.getString("DRIVER");
+        String URL = properties.getString("URL");
+        String USUARIO = properties.getString("USUARIO");
+        String PASSWORD = properties.getString("PASSWORD");
+        try {
+            Class.forName(DRIVER);
+            try (Connection conn = DriverManager.getConnection(URL, USUARIO, PASSWORD)) {
+                List<RespaldoMySQL> lista = listaRespaldoTodos(conn);
+                boolean exito = ejecutaRespaldo(lista, conn);
+                if (!exito) {
+                    respaldoexitoso = false;
+                }
+            }
+        } catch (ClassNotFoundException | SQLException exc) {
+            LOG.error(exc);
+            respaldoexitoso = false;
+        }
+        return respaldoexitoso;
+    }
+
+    public static boolean ejecutaRespaldoArthas() {
+        ResourceBundle properties = ResourceBundle.getBundle("turbinux");
+        boolean respaldoexitoso = true;
+
+        String DRIVER = properties.getString("DRIVER");
+        String URL = properties.getString("URL");
+        String USUARIO = properties.getString("USUARIO");
+        String PASSWORD = properties.getString("PASSWORD");
+        try {
+            Class.forName(DRIVER);
+            try (Connection conn = DriverManager.getConnection(URL, USUARIO, PASSWORD)) {
+                List<RespaldoMySQL> lista = listaRespaldoArthas(conn);
+                boolean exito = ejecutaRespaldo(lista, conn);
+                if (!exito) {
+                    respaldoexitoso = false;
+                }
+            }
+        } catch (ClassNotFoundException | SQLException exc) {
+            LOG.error(exc);
+            respaldoexitoso = false;
+        }
+        return respaldoexitoso;
+    }
+
+    public static boolean ejecutaRespaldoDGECI() {
+        ResourceBundle properties = ResourceBundle.getBundle("turbinux");
+        boolean respaldoexitoso = true;
+
+        String DRIVER = properties.getString("DRIVER");
+        String URL = properties.getString("URL");
+        String USUARIO = properties.getString("USUARIO");
+        String PASSWORD = properties.getString("PASSWORD");
+        try {
+            Class.forName(DRIVER);
+            try (Connection conn = DriverManager.getConnection(URL, USUARIO, PASSWORD)) {
+                List<RespaldoMySQL> lista = listaRespaldosDGECI(conn);
+                boolean exito = ejecutaRespaldo(lista, conn);
+                if (!exito) {
+                    respaldoexitoso = false;
+                }
+            }
+        } catch (ClassNotFoundException | SQLException exc) {
+            LOG.error(exc);
+            respaldoexitoso = false;
+        }
+        return respaldoexitoso;
+    }
+
+    public static boolean ejecutaRespaldoENEO() {
+        ResourceBundle properties = ResourceBundle.getBundle("turbinux");
+        boolean respaldoexitoso = true;
+
+        String DRIVER = properties.getString("DRIVER");
+        String URL = properties.getString("URL");
+        String USUARIO = properties.getString("USUARIO");
+        String PASSWORD = properties.getString("PASSWORD");
+        try {
+            Class.forName(DRIVER);
+            try (Connection conn = DriverManager.getConnection(URL, USUARIO, PASSWORD)) {
+                List<RespaldoMySQL> lista = listaRespaldosENEO(conn);
+                boolean exito = ejecutaRespaldo(lista, conn);
+                if (!exito) {
+                    respaldoexitoso = false;
+                }
+            }
+        } catch (ClassNotFoundException | SQLException exc) {
+            LOG.error(exc);
+            respaldoexitoso = false;
+        }
+        return respaldoexitoso;
+    }
+
+    public static boolean ejecutaRespaldo(List<RespaldoMySQL> lista, Connection conn) {
+        boolean respaldoexitoso;
+        ResourceBundle properties = ResourceBundle.getBundle("turbinux");
+
+        LOG.debug("--- Inicia Respaldo ---");
+
+        String MYSQL_RESPALDO_UBICACION = properties.getString("MYSQL_RESPALDO_UBICACION");
+        MYSQL_RESPALDO_UBICACION = MYSQL_RESPALDO_UBICACION + Utilerias.fechaHoySistemaYYYYMMDD() + "\\";
+        File temproral = new File(MYSQL_RESPALDO_UBICACION);
+        boolean mkdirs = temproral.mkdirs();
+        LOG.debug("--- directorios ---");
+        if (mkdirs) {
+
+        } else {
+            temproral.delete();
+            temproral.mkdirs();
+        }
+        respaldoexitoso = respaldo(lista, conn);
+
+        LOG.debug("--- Termina Respaldo ---");
+        return respaldoexitoso;
+    }
+
+    private static boolean respaldo(List<RespaldoMySQL> lista, Connection conn) {
+        boolean respaldoexitoso = true;
+        ResourceBundle properties = ResourceBundle.getBundle("turbinux");
+        String MYSQL_UBICACION = properties.getString("MYSQL_UBICACION");
+        String MYSQL_RESPALDO_UBICACION = properties.getString("MYSQL_RESPALDO_UBICACION");
+        MYSQL_RESPALDO_UBICACION = MYSQL_RESPALDO_UBICACION + Utilerias.fechaHoySistemaYYYYMMDD() + "\\";
+        List<BitacoraRespaldoMySQL> listabitacora = new ArrayList<>();
+
+        for (RespaldoMySQL respaldo : lista) {
+            List<String> esquemas = listaEsquemas(respaldo.getUrl(), respaldo.getUsuario(), respaldo.getPassword(), respaldo.getPuerto());
+            for (String esquema : esquemas) {
+                LOG.debug("Hola inicio del for");
+                if (!esquema.equals("information_schema") && !esquema.equals("test") && !esquema.equals("performance_schema") && !esquema.equals("sys") && !esquema.equals("mysql")) {
+                    LOG.debug("Hola if de esquema");
+                    String fechahora = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss").format(new java.util.Date());
+                    String nombre_archivo = respaldo.getUsuario() + "_" + esquema + "_" + fechahora;
+                    String[] command = {MYSQL_UBICACION, "--host=" + respaldo.getUrl(), "--user=" + respaldo.getUsuario(), "--password=" + respaldo.getPassword(), "--port=" + respaldo.getPuerto(), "--databases", "--routines", esquema};
+                    int exito = executeCommand(command, MYSQL_RESPALDO_UBICACION + nombre_archivo + ".sql", MYSQL_RESPALDO_UBICACION + nombre_archivo + ".log");
+
+                    boolean exitozipeando = UtileriasZipArchivo.zipeaArchivo(new File(MYSQL_RESPALDO_UBICACION + nombre_archivo + ".zip"), new File(MYSQL_RESPALDO_UBICACION + nombre_archivo + ".sql"));
+                    //UtileriasZipArchivo.zipeaArchivo(new File(MYSQL_RESPALDO_UBICACION + nombre_archivo + "_log.zip"), new File(MYSQL_RESPALDO_UBICACION + nombre_archivo + ".log"));
+                    File file = new File(MYSQL_RESPALDO_UBICACION + nombre_archivo + ".sql");
+                    boolean exitodelete = file.delete();
+                    if (exitodelete) {
+                        file = new File(MYSQL_RESPALDO_UBICACION + nombre_archivo + ".log");
+                        boolean exitodelete1 = file.delete();
+                        if (exitodelete1) {
+                            LOG.debug("Hola genero el zip");
+                            file = new File(MYSQL_RESPALDO_UBICACION + nombre_archivo + ".zip");
+                            long fileSizeInBytes = file.length();
+                            double fileSizeInKB = fileSizeInBytes / 1024d;
+                            String strfileSizeInMB = Utilerias.redondeaDouble(fileSizeInKB, 2);
+                            BitacoraRespaldoMySQL bean = new BitacoraRespaldoMySQL(respaldo.getIdrespaldomysql(), exito, esquema, Double.parseDouble(strfileSizeInMB));
+                            bean.setRespaldomysqlbean(respaldo);
+                            listabitacora.add(bean);
+                            BitacoraRespaldoMySQLService.alta(conn, bean);
+                            if (exito != 0 || exitozipeando == false) {
+                                respaldoexitoso = false;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        List<CorreoMonitoreo> listamail = Base.listaCorreosMonitoreo();
+        List<CorreoMonitoreo> listacc = new ArrayList<>();
+        EnvioCorreoElectronico.mandarCorreoRespaldosMySQL(listamail, listacc, listabitacora);
+        return respaldoexitoso;
+    }
+
+    public static int executeCommand(String[] command, String sqlfile, String outputfile) {
+        int exito = -1;
+
+        StringBuilder output = new StringBuilder();
+        Process p;
+        try {
+            ProcessBuilder builder = new ProcessBuilder(command);
+            builder.redirectOutput(new File(sqlfile));
+            builder.redirectError(new File(outputfile));
+
+            p = builder.start(); // throws IOException
+            exito = p.waitFor();
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    output.append(line).append("\n");
+                }
+            }
+        } catch (IOException | InterruptedException e) {
+            LOG.error(e);
+        }
+        return exito;
+    }
+
+    private static List<RespaldoMySQL> listaRespaldoTodos(Connection conn) {
+
+        List<RespaldoMySQL> lista = new ArrayList<>();
+        Statement stmt = null;
+        try {
+
+            stmt = conn.createStatement();
+            String sql = "SELECT * FROM RESPALDOMYSQL";
+            try (ResultSet rs = stmt.executeQuery(sql)) {
+                while (rs.next()) {
+                    lista.add(new RespaldoMySQL(rs.getInt("IDRESPALDOMYSQL"), rs.getInt("FRECUENCIA"), rs.getString("USUARIO"), rs.getString("PASSWORD"), rs.getString("PUERTO"), rs.getString("URL")));
+                }
+            }
+            stmt.close();
+        } catch (SQLException se) {
+            LOG.error(se);
+        } finally {
+            try {
+                if (stmt != null) {
+                    stmt.close();
+                }
+            } catch (SQLException se2) {
+                LOG.error(se2);
+            }
+        }
+        return lista;
+    }
+
+    private static List<RespaldoMySQL> listaRespaldoArthas(Connection conn) {
+        LOG.debug("listaRespaldoArthas SELECT * FROM RESPALDOMYSQL WHERE IDRESPALDOMYSQL = 3");
+        List<RespaldoMySQL> lista = new ArrayList<>();
+        try (Statement stmt = conn.createStatement()) {
+            String sql = "SELECT * FROM RESPALDOMYSQL WHERE IDRESPALDOMYSQL = 3";
+            try (ResultSet rs = stmt.executeQuery(sql)) {
+                while (rs.next()) {
+                    LOG.debug("db info " + rs.getInt("IDRESPALDOMYSQL"));
+                    lista.add(new RespaldoMySQL(rs.getInt("IDRESPALDOMYSQL"), rs.getInt("FRECUENCIA"), rs.getString("USUARIO"), rs.getString("PASSWORD"), rs.getString("PUERTO"), rs.getString("URL")));
+                }
+            }
+            stmt.close();
+        } catch (SQLException se) {
+            LOG.error(se);
+        }
+        return lista;
+    }
+
+    private static List<RespaldoMySQL> listaRespaldosDGECI(Connection conn) {
+
+        List<RespaldoMySQL> lista = new ArrayList<>();
+        try (Statement stmt = conn.createStatement()) {
+            String sql = "SELECT * FROM RESPALDOMYSQL WHERE IDRESPALDOMYSQL = 6";
+            try (ResultSet rs = stmt.executeQuery(sql)) {
+                while (rs.next()) {
+                    lista.add(new RespaldoMySQL(rs.getInt("IDRESPALDOMYSQL"), rs.getInt("FRECUENCIA"), rs.getString("USUARIO"), rs.getString("PASSWORD"), rs.getString("PUERTO"), rs.getString("URL")));
+                }
+            }
+            stmt.close();
+        } catch (SQLException se) {
+            LOG.error(se);
+        }
+        return lista;
+    }
+
+    private static List<RespaldoMySQL> listaRespaldosENEO(Connection conn) {
+        List<RespaldoMySQL> lista = new ArrayList<>();
+        try (Statement stmt = conn.createStatement()) {
+            String sql = "SELECT * FROM RESPALDOMYSQL WHERE IDRESPALDOMYSQL = 5";
+            try (ResultSet rs = stmt.executeQuery(sql)) {
+                while (rs.next()) {
+                    lista.add(new RespaldoMySQL(rs.getInt("IDRESPALDOMYSQL"), rs.getInt("FRECUENCIA"), rs.getString("USUARIO"), rs.getString("PASSWORD"), rs.getString("PUERTO"), rs.getString("URL")));
+                }
+            }
+            stmt.close();
+        } catch (SQLException se) {
+            LOG.error(se);
+        }
+        return lista;
+    }
+
+    private static List<String> listaEsquemas(String url, String usuario, String password, String puerto) {
+        ResourceBundle properties = ResourceBundle.getBundle("turbinux");
+
+        String DRIVER = properties.getString("DRIVER");
+        String MYSQL_URL = "jdbc:mysql://" + url + ":" + puerto + "/information_schema?serverTimezone=America/Mexico_City&useSSL=false";
+        List<String> lista = new ArrayList<>();
+        Connection conn = null;
+        Statement stmt = null;
+        try {
+            Class.forName(DRIVER);
+            conn = DriverManager.getConnection(MYSQL_URL, usuario, password);
+            stmt = conn.createStatement();
+            String sql = "SHOW DATABASES";
+            try (ResultSet rs = stmt.executeQuery(sql)) {
+                while (rs.next()) {
+                    lista.add(rs.getString("DATABASE"));
+                }
+            }
+            stmt.close();
+            conn.close();
+        } catch (SQLException | ClassNotFoundException se) {
+            LOG.error(se);
+        } finally {
+
+            try {
+                if (stmt != null) {
+                    stmt.close();
+                }
+            } catch (SQLException se2) {
+            }
+            try {
+                if (conn != null) {
+                    conn.close();
+                }
+            } catch (SQLException se) {
+                LOG.error(se);
+            }
+        }
+        return lista;
+    }
+}

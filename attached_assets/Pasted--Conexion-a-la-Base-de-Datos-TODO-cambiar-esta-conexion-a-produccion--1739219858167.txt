@@ -1,0 +1,63 @@
+##---------Conexion a la Base de Datos-----------------
+##TODO: cambiar esta conexion a produccion una vez que ya este en MySQL 8
+DRIVER=com.mysql.cj.jdbc.Driver
+URL=jdbc:mysql://turbinux.com:3350/turbinux?serverTimezone=America/Mexico_City&useSSL=false
+USUARIO=root2
+PASSWORD=pacman
+
+##---- REALIZA LAS FUNCIONES DE DRP---- 
+##---- HACE UPDATE DEL REPOSITORIO
+##---- COPIA EL ULTIMO RESPALDO DE BASE DE DATOS
+##---- CARGA LA ULTIMA COPIA DE BASE DE DATOS
+DRP_ACTIVO=0
+
+##---- COPIA LOS ULTIMOS ARCHIVOS DE CARPETAS DE PRODUCCTION
+##SIN USO TODAVIA
+DRP_COPIA_CARPETAS_ACTIVO=0
+
+##---- RESPALDA LAS CARPETAS QUE ESTEN CONFIGURADAS EN LA BASE DE DATOS DE TURBINUX ----
+RESPADOS_CARPETAS_ACTIVO=0
+
+##---- RESPALDA LAS BASES DE DATOS DE ARTHAS Y LA ENEO ----
+RESPADOS_MYSQL_ACTIVO=1
+
+##---- MONITOREA QUE LOS PUERTOS DE LAS APLICACIONES RESPONDAN, NO ES GARANTIA QUE LAS APLICACIONES FUNCIONEN PERO ES UNA PRUEBA ----
+MONITOREO_PUERTOS_ACTIVO=1
+
+## CONSTANTES CONEXION FTP ##
+FTP_USUARIO=turbinux
+FTP_HOST=turbinux.com
+FTP_PASSWORD=Oroblram7.
+FTP_PUERTO=32
+
+#### CONSTANTES DE RESPALDOS ###
+
+MYSQL_UBICACION=C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysqldump.exe
+MYSQL_RESPALDO_UBICACION=Z:\\RespaldosAutomaticos\\
+RESPALDO_FILESYSTEM_UBICACION=Z:\\RespaldosAutomaticosServidores\\
+
+##### CONSTANTES DE ENVÍO DE CORREO ELECTRÓNICO #####
+MAIL_SMTP_HOST=smtp.gmail.com
+MAIL_SMTP_STARTTLS_ENABLE=true
+MAIL_SMTP_PORT=587
+MAIL_SMTP_USER=turbinux@turbinux.com
+MAIL_SMTP_PASSWORD=oroblram
+MAIL_SMTP_AUTH=true
+EMAIL_DESDE=turbinux@turbinux.com
+
+##---------Conexion a la Base de Datos localhost para DRP-----------------
+DRIVER_LOCALHOST=com.mysql.cj.jdbc.Driver
+URL_LOCALHOST=jdbc:mysql://localhost:3306/deportextil?serverTimezone=America/Mexico_City&useSSL=false
+USUARIO_LOCALHOST=deportextil
+PASSWORD_LOCALHOST=pacman
+
+##?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC
+
+## CONSTANTES DRP ##
+SVN_UBICACION=D:\\svn\\repositorio\\Desarrollo
+MYSQL_UBICACION_DRP=C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin
+FTP_COPIA_ORIGEN=/Respaldos Turbinux/RespaldosAutomaticos/
+FTP_COPIA_DESTINO=D:/DRP/ftp
+
+FTP_COPIA_ORIGEN_ARCHIVOS_SERVIDOR=/Respaldos Turbinux/RespaldosAutomaticosServidores/
+FTP_COPIA_DESTINO_ARCHIVOS_SERVIDOR=D:/DRP/

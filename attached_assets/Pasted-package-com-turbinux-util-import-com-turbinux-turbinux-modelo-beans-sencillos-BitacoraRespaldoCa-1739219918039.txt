@@ -1,0 +1,433 @@
+package com.turbinux.util;
+
+import com.turbinux.turbinux.modelo.beans.sencillos.BitacoraRespaldoCarpeta;
+import com.turbinux.turbinux.modelo.beans.sencillos.BitacoraRespaldoMySQL;
+import com.turbinux.turbinux.modelo.beans.sencillos.CorreoMonitoreo;
+import com.turbinux.turbinux.modelo.beans.sencillos.Revision;
+import java.util.Date;
+import java.util.List;
+import java.util.Properties;
+import java.util.ResourceBundle;
+import javax.mail.MessagingException;
+
+import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeBodyPart;
+import javax.mail.internet.MimeMessage;
+import javax.mail.internet.MimeMultipart;
+
+import org.apache.log4j.Logger;
+
+public class EnvioCorreoElectronico {
+
+    private static final Logger LOG = Logger.getLogger(EnvioCorreoElectronico.class);
+
+    private static final String MAIL_SMTP_HOST = ResourceBundle.getBundle(Constantes.PROPERTIES).getString("MAIL_SMTP_HOST");
+    private static final String MAIL_SMTP_STARTTLS_ENABLE = ResourceBundle.getBundle(Constantes.PROPERTIES).getString("MAIL_SMTP_STARTTLS_ENABLE");
+    private static final String MAIL_SMTP_PORT = ResourceBundle.getBundle(Constantes.PROPERTIES).getString("MAIL_SMTP_PORT");
+    private static final String MAIL_SMTP_USER = ResourceBundle.getBundle(Constantes.PROPERTIES).getString("MAIL_SMTP_USER");
+    private static final String MAIL_SMTP_PASSWORD = ResourceBundle.getBundle(Constantes.PROPERTIES).getString("MAIL_SMTP_PASSWORD");
+    private static final String MAIL_SMTP_AUTH = ResourceBundle.getBundle(Constantes.PROPERTIES).getString("MAIL_SMTP_AUTH");
+    private static final String EMAIL_DESDE = ResourceBundle.getBundle(Constantes.PROPERTIES).getString("EMAIL_DESDE");
+    
+    private static final String TEXT_HTML = "text/html";
+
+    public static int mandarCorreoMonitoreo(List<CorreoMonitoreo> correos, List<CorreoMonitoreo> correoscc, List<Revision> lista) {
+
+        String SUBJECT = "Some Network Ports are Offline";
+
+        int correosenviados = 0;
+
+        boolean IS_HTML_FORMAT = true;
+        boolean DEBUG = false;
+
+        Properties properties = new Properties();
+        properties.put("mail.smtp.host", MAIL_SMTP_HOST);
+        properties.setProperty("mail.smtp.starttls.enable", MAIL_SMTP_STARTTLS_ENABLE);
+        properties.setProperty("mail.smtp.port", MAIL_SMTP_PORT);
+        properties.setProperty("mail.smtp.user", MAIL_SMTP_USER);
+        properties.setProperty("mail.smtp.auth", MAIL_SMTP_AUTH);
+        properties.put("mail.smtp.socketFactory.port", "465");
+        properties.put("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory");
+        properties.put("mail.smtp.socketFactory.fallb", "false");
+        Session session = Session.getDefaultInstance(properties, null);
+        session.setDebug(DEBUG);
+
+        try {
+            Transport t = session.getTransport("smtp");
+            t.connect(MAIL_SMTP_HOST, Integer.parseInt(MAIL_SMTP_PORT), MAIL_SMTP_USER, MAIL_SMTP_PASSWORD);
+            MimeMultipart multipart = new MimeMultipart();
+            MimeMessage msg = new MimeMessage(session);
+            msg.setFrom(new InternetAddress(EMAIL_DESDE));
+            String nombre_para = "-";
+            for (CorreoMonitoreo bean : correos) {
+                nombre_para = bean.getNombre();
+                String correo_para = bean.getCorreo();
+                msg.addRecipient(javax.mail.Message.RecipientType.TO, new InternetAddress(correo_para));
+            }
+            for (CorreoMonitoreo bean : correoscc) {
+                String correo_para = bean.getCorreo();
+                msg.addRecipient(javax.mail.Message.RecipientType.CC, new InternetAddress(correo_para));
+            }
+
+            msg.setSubject(SUBJECT + " - " + nombre_para);
+            msg.setSentDate(new Date());
+            MimeBodyPart mbp = new MimeBodyPart();
+            if (IS_HTML_FORMAT) {
+                mbp.setContent(generaCuerpoCorreo(nombre_para, lista), TEXT_HTML);
+            } else {
+                mbp.setText(generaCuerpoCorreo(nombre_para, lista), TEXT_HTML);
+            }
+
+            multipart.addBodyPart(mbp);
+            msg.setContent(multipart);
+            try {
+                t.sendMessage(msg, msg.getAllRecipients());
+            } catch (MessagingException exc) {
+                LOG.error(exc);
+            }
+            correosenviados++;
+            t.close();
+        } catch (NumberFormatException | MessagingException mex) {
+            LOG.error(mex);
+        }
+        return correosenviados;
+    }
+
+    public static int mandarCorreoRespaldosMySQL(List<CorreoMonitoreo> correos, List<CorreoMonitoreo> correoscc, List<BitacoraRespaldoMySQL> lista) {
+
+        boolean todook = true;
+        for (BitacoraRespaldoMySQL bitacora : lista) {
+            if (bitacora.getExito() != 0) {
+                todook = false;
+            }
+            if (bitacora.getPeso() <= 0.5d) {
+                todook = false;
+            }
+        }
+
+        String SUBJECT = todook ? "Correct Database Backup" : "Failed Database Backup";
+
+        int correosenviados = 0;
+
+        boolean IS_HTML_FORMAT = true;
+        boolean DEBUG = false;
+
+        Properties properties = new Properties();
+        properties.put("mail.smtp.host", MAIL_SMTP_HOST);
+        properties.setProperty("mail.smtp.starttls.enable", MAIL_SMTP_STARTTLS_ENABLE);
+        properties.setProperty("mail.smtp.port", MAIL_SMTP_PORT);
+        properties.setProperty("mail.smtp.user", MAIL_SMTP_USER);
+        properties.setProperty("mail.smtp.auth", MAIL_SMTP_AUTH);
+        properties.put("mail.smtp.socketFactory.port", "465");
+        properties.put("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory");
+        properties.put("mail.smtp.socketFactory.fallb", "false");
+        Session session = Session.getDefaultInstance(properties, null);
+        session.setDebug(DEBUG);
+
+        try {
+            Transport t = session.getTransport("smtp");
+            t.connect(MAIL_SMTP_HOST, Integer.parseInt(MAIL_SMTP_PORT), MAIL_SMTP_USER, MAIL_SMTP_PASSWORD);
+            MimeMultipart multipart = new MimeMultipart();
+            MimeMessage msg = new MimeMessage(session);
+            msg.setFrom(new InternetAddress(EMAIL_DESDE));
+            String nombre_para = "-";
+            for (CorreoMonitoreo bean : correos) {
+                nombre_para = bean.getNombre();
+                String correo_para = bean.getCorreo();
+                msg.addRecipient(javax.mail.Message.RecipientType.TO, new InternetAddress(correo_para));
+                LOG.debug(correo_para);
+            }
+            for (CorreoMonitoreo bean : correoscc) {
+                String correo_para = bean.getCorreo();
+                msg.addRecipient(javax.mail.Message.RecipientType.CC, new InternetAddress(correo_para));
+            }
+
+            msg.setSubject(SUBJECT + " - " + nombre_para);
+            msg.setSentDate(new Date());
+            MimeBodyPart mbp = new MimeBodyPart();
+            if (IS_HTML_FORMAT) {
+                mbp.setContent(generaCuerpoCorreoRespaldoMySQL(nombre_para, lista), TEXT_HTML);
+            } else {
+                mbp.setText(generaCuerpoCorreoRespaldoMySQL(nombre_para, lista), TEXT_HTML);
+            }
+
+            multipart.addBodyPart(mbp);
+            msg.setContent(multipart);
+            try {
+                LOG.debug(msg);
+                t.sendMessage(msg, msg.getAllRecipients());
+            } catch (MessagingException exc) {
+                LOG.error(exc);
+            }
+            correosenviados++;
+            t.close();
+        } catch (MessagingException mex) {
+            LOG.error(mex);
+        }
+        return correosenviados;
+    }
+
+    public static int mandarCorreoDRP(List<CorreoMonitoreo> correos, List<CorreoMonitoreo> correoscc, String evidencia) {
+        int correosenviados = 0;
+
+        boolean IS_HTML_FORMAT = true;
+        boolean DEBUG = false;
+
+        Properties properties = new Properties();
+        properties.put("mail.smtp.host", MAIL_SMTP_HOST);
+        properties.setProperty("mail.smtp.starttls.enable", MAIL_SMTP_STARTTLS_ENABLE);
+        properties.setProperty("mail.smtp.port", MAIL_SMTP_PORT);
+        properties.setProperty("mail.smtp.user", MAIL_SMTP_USER);
+        properties.setProperty("mail.smtp.auth", MAIL_SMTP_AUTH);
+        properties.put("mail.smtp.socketFactory.port", "465");
+        properties.put("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory");
+        properties.put("mail.smtp.socketFactory.fallb", "false");
+        Session session = Session.getDefaultInstance(properties, null);
+        session.setDebug(DEBUG);
+
+        try {
+            Transport t = session.getTransport("smtp");
+            t.connect(MAIL_SMTP_HOST, Integer.parseInt(MAIL_SMTP_PORT), MAIL_SMTP_USER, MAIL_SMTP_PASSWORD);
+            MimeMultipart multipart = new MimeMultipart();
+            MimeMessage msg = new MimeMessage(session);
+            msg.setFrom(new InternetAddress(EMAIL_DESDE));
+            String nombre_para = "-";
+            for (CorreoMonitoreo bean : correos) {
+                nombre_para = bean.getNombre();
+                String correo_para = bean.getCorreo();
+                msg.addRecipient(javax.mail.Message.RecipientType.TO, new InternetAddress(correo_para));
+                LOG.debug(correo_para);
+            }
+            for (CorreoMonitoreo bean : correoscc) {
+                String correo_para = bean.getCorreo();
+                msg.addRecipient(javax.mail.Message.RecipientType.CC, new InternetAddress(correo_para));
+            }
+
+            msg.setSubject("DRP Finalizado - " + nombre_para);
+            msg.setSentDate(new Date());
+            MimeBodyPart mbp = new MimeBodyPart();
+            if (IS_HTML_FORMAT) {
+                mbp.setContent(generaCuerpoCorreoDRP(nombre_para, evidencia), TEXT_HTML);
+            } else {
+                mbp.setText(generaCuerpoCorreoDRP(nombre_para, evidencia), TEXT_HTML);
+            }
+
+            multipart.addBodyPart(mbp);
+            msg.setContent(multipart);
+            try {
+                LOG.debug(msg);
+                t.sendMessage(msg, msg.getAllRecipients());
+            } catch (MessagingException exc) {
+                LOG.error(exc);
+            }
+            correosenviados++;
+            t.close();
+        } catch (MessagingException mex) {
+            LOG.error(mex);
+        }
+        return correosenviados;
+    }
+
+    public static int mandarCorreoRespaldosCarpeta(List<CorreoMonitoreo> correos, List<CorreoMonitoreo> correoscc, List<BitacoraRespaldoCarpeta> lista) {
+
+        boolean todook = true;
+
+        String SUBJECT = todook ? "Server Folder Backup Correct" : "Server Folder Backup Fail";
+
+        int correosenviados = 0;
+
+        boolean IS_HTML_FORMAT = true;
+        boolean DEBUG = false;
+
+        Properties properties = new Properties();
+        properties.put("mail.smtp.host", MAIL_SMTP_HOST);
+        properties.setProperty("mail.smtp.starttls.enable", MAIL_SMTP_STARTTLS_ENABLE);
+        properties.setProperty("mail.smtp.port", MAIL_SMTP_PORT);
+        properties.setProperty("mail.smtp.user", MAIL_SMTP_USER);
+        properties.setProperty("mail.smtp.auth", MAIL_SMTP_AUTH);
+        properties.put("mail.smtp.socketFactory.port", "465");
+        properties.put("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory");
+        properties.put("mail.smtp.socketFactory.fallb", "false");
+        Session session = Session.getDefaultInstance(properties, null);
+        session.setDebug(DEBUG);
+
+        try {
+            Transport t = session.getTransport("smtp");
+            t.connect(MAIL_SMTP_HOST, Integer.parseInt(MAIL_SMTP_PORT), MAIL_SMTP_USER, MAIL_SMTP_PASSWORD);
+            MimeMultipart multipart = new MimeMultipart();
+            MimeMessage msg = new MimeMessage(session);
+            msg.setFrom(new InternetAddress(EMAIL_DESDE));
+            String nombre_para = "-";
+            for (CorreoMonitoreo bean : correos) {
+                nombre_para = bean.getNombre();
+                String correo_para = bean.getCorreo();
+                msg.addRecipient(javax.mail.Message.RecipientType.TO, new InternetAddress(correo_para));
+            }
+            for (CorreoMonitoreo bean : correoscc) {
+                String correo_para = bean.getCorreo();
+                msg.addRecipient(javax.mail.Message.RecipientType.CC, new InternetAddress(correo_para));
+            }
+
+            msg.setSubject(SUBJECT + " - " + nombre_para);
+            msg.setSentDate(new Date());
+            MimeBodyPart mbp = new MimeBodyPart();
+            if (IS_HTML_FORMAT) {
+                mbp.setContent(generaCuerpoCorreoRespaldoCarpeta(nombre_para, lista), TEXT_HTML);
+            } else {
+                mbp.setText(generaCuerpoCorreoRespaldoCarpeta(nombre_para, lista), TEXT_HTML);
+            }
+
+            multipart.addBodyPart(mbp);
+            msg.setContent(multipart);
+            try {
+                t.sendMessage(msg, msg.getAllRecipients());
+            } catch (Exception exc) {
+                LOG.error(exc);
+            }
+            correosenviados++;
+            t.close();
+        } catch (NumberFormatException | MessagingException mex) {
+            LOG.error(mex);
+        }
+        return correosenviados;
+    }
+
+    private static String generaCuerpoCorreo(String nombre, List<Revision> lista) {
+        String BODY = "<HTML>"
+                + "<BODY BGCOLOR='#FFFFFF' TEXT='#000000' LINK='#FF0000' VLINK='#800000' ALINK='#FF00FF' BACKGROUND='?'>"
+                + "<table align='center' border='0'>"
+                + "<tr>"
+                + "<td colspan='2' align='center'>"
+                + "<img src='http://icons.iconarchive.com/icons/oxygen-icons.org/oxygen/128/Actions-window-close-icon.png'>"
+                + "</td>"
+                + "</tr>"
+                + "<td >"
+                + "<br>"
+                + "</td>"
+                + "<tr>"
+                + "<td colspan='2' style='font-family: Arial; font-size: 13px;'>"
+                + "Mexico, D.F., " + Utilerias.fechaHoyDDMMYYYY()
+                + "</td>"
+                + "</tr>"
+                + "<tr>"
+                + "<td colspan='2' style='font-family: Arial; font-size: 14px;'>"
+                + "Estimado " + nombre + ", los siguientes servicios estan abajo:<br/>"
+                + "</td>"
+                + "</tr>"
+                + "</table>"
+                + "<table align='center'>";
+        BODY = BODY + "<tr><td bgcolor='#AAAAAA'>Nombre</td><td bgcolor='#AAAAAA'>Host</td><td bgcolor='#AAAAAA'>Puerto</td></tr>";
+
+        StringBuilder buf = new StringBuilder();
+        lista.stream().forEach((bean) -> {
+            buf.append("<tr><td bgcolor='").append(bean.getExito() == 1 ? "#00FF00" : "#FF0000").append("'>").append(bean.getNombre()).append("</td><td>").append(bean.getHost()).append("</td><td>").append(bean.getPuerto()).append("</td></tr>");
+        });
+        BODY += buf.toString();
+
+        BODY += "</table>"
+                + "</BODY>"
+                + "</HTML>"
+                + "";
+        return BODY;
+    }
+
+    private static String generaCuerpoCorreoRespaldoMySQL(String nombre, List<BitacoraRespaldoMySQL> lista) {
+        String BODY = "<HTML>"
+                + "<BODY BGCOLOR='#FFFFFF' TEXT='#000000' LINK='#FF0000' VLINK='#800000' ALINK='#FF00FF' BACKGROUND='?'>"
+                + "<table align='center' border='0'>"
+                + "<tr>"
+                + "<td colspan='2' align='center'>"
+                + "<img src='http://wpstartpage.com/wp-content/uploads/2013/07/backup-review-150x150.png'>"
+                + "</td>"
+                + "</tr>"
+                + "<td >"
+                + "<br>"
+                + "</td>"
+                + "<tr>"
+                + "<td colspan='2' style='font-family: Arial; font-size: 13px;'>"
+                + "Mexico, D.F., " + Utilerias.fechaHoyDDMMYYYY()
+                + "</td>"
+                + "</tr>"
+                + "<tr>"
+                + "<td colspan='2' style='font-family: Arial; font-size: 14px;'>"
+                + "Estimado " + nombre + ", se realizaron los siguientes respaldos:<br/>"
+                + "</td>"
+                + "</tr>"
+                + "</table>"
+                + "<table align='center' border='1'>";
+        BODY = BODY + "<tr><td bgcolor='#AAAAAA'>Servidor</td><td bgcolor='#AAAAAA'>Esquema</td><td bgcolor='#AAAAAA'>Peso</td></tr>";
+
+        StringBuilder buf = new StringBuilder();
+        lista.stream().forEach((bean) -> {
+            bean.setPeso(bean.getPeso() / 1024d);
+            buf.append("<tr><td bgcolor='").append((bean.getExito() == 0 && bean.getPeso() >= 0.5d) ? "#00CC66" : "#FF3300").append("'>").append(bean.getRespaldomysqlbean().getUrl()).append("</td><td>").append(bean.getMensaje()).append("</td><td>").append(bean.getPeso()).append(" MB</td></tr>");
+        });
+        BODY += buf.toString();
+
+        BODY += "</table>"
+                + "</BODY>"
+                + "</HTML>"
+                + "";
+        return BODY;
+    }
+
+    private static String generaCuerpoCorreoRespaldoCarpeta(String nombre, List<BitacoraRespaldoCarpeta> lista) {
+        String BODY = "<HTML>"
+                + "<BODY BGCOLOR='#FFFFFF' TEXT='#000000' LINK='#FF0000' VLINK='#800000' ALINK='#FF00FF' BACKGROUND='?'>"
+                + "<table align='center' border='0'>"
+                + "<tr>"
+                + "<td colspan='2' align='center'>"
+                + "<img src='http://icons.iconarchive.com/icons/mcdo-design/smooth-leopard/512/Backup-Folder-Blue-icon.png'>"
+                + "</td>"
+                + "</tr>"
+                + "<td >"
+                + "<br>"
+                + "</td>"
+                + "<tr>"
+                + "<td colspan='2' style='font-family: Arial; font-size: 13px;'>"
+                + "Mexico, D.F., " + Utilerias.fechaHoyDDMMYYYY()
+                + "</td>"
+                + "</tr>"
+                + "<tr>"
+                + "<td colspan='2' style='font-family: Arial; font-size: 14px;'>"
+                + "Estimado " + nombre + ", se realizaron los siguientes respaldos:<br/>"
+                + "</td>"
+                + "</tr>"
+                + "</table>"
+                + "<table align='center' border='1'>";
+        BODY = BODY + "<tr><td bgcolor='#AAAAAA'>Carpeta</td><td bgcolor='#AAAAAA'>Archivo</td><td bgcolor='#AAAAAA'>Peso</td></tr>";
+        StringBuilder buf = new StringBuilder();
+        lista.stream().forEach((bean) -> {
+            buf.append("<tr><td bgcolor='").append((bean.getExito() == 0 && bean.getPeso() >= 0.5d) ? "#00CC66" : "#FF3300").append("'>").append(bean.getRespaldocarpetabean().getRuta()).append("</td><td>").append(bean.getMensaje()).append("</td><td>").append(bean.getPeso()).append(" KB</td></tr>");
+        });
+        BODY += buf.toString();
+
+        BODY += "</table>"
+                + "</BODY>"
+                + "</HTML>"
+                + "";
+        return BODY;
+    }
+
+    private static String generaCuerpoCorreoDRP(String nombre, String evidencia) {
+        String BODY = "<HTML>"
+                + "<BODY BGCOLOR='#FFFFFF' TEXT='#000000' LINK='#FF0000' VLINK='#800000' ALINK='#FF00FF' BACKGROUND='?'>"
+                + "<table align='center' border='0'>"
+                + "<td colspan='2' style='font-family: Arial; font-size: 13px;'>"
+                + "Mexico, D.F., " + Utilerias.fechaHoyDDMMYYYY()
+                + "</td>"
+                + "</tr>"
+                + "<tr>"
+                + "<td colspan='2' style='font-family: Arial; font-size: 14px;'>"
+                + "Estimado " + nombre + ", el DRP termino con el registro mas reciente: " + evidencia + "<br/>"
+                + "</td>"
+                + "</tr>"
+                + "</table>"
+                + "</BODY>"
+                + "</HTML>"
+                + "";
+        return BODY;
+    }
+}

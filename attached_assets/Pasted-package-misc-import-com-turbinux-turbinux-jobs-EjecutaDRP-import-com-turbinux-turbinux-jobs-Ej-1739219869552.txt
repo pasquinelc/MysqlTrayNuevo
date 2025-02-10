@@ -1,0 +1,221 @@
+package misc;
+
+import com.turbinux.turbinux.jobs.EjecutaDRP;
+import com.turbinux.turbinux.jobs.EjecutaDRPCopiaCarpetas;
+import com.turbinux.turbinux.jobs.EjecutaRespaldosCarpeta;
+import com.turbinux.turbinux.jobs.EjecutaRespaldosMySQL;
+import com.turbinux.turbinux.jobs.MonitoreoTurbinux;
+import com.turbinux.util.Constantes;
+import java.awt.*;
+import java.awt.event.*;
+import java.net.URL;
+import java.util.ResourceBundle;
+import javax.swing.*;
+import org.apache.log4j.Logger;
+import org.quartz.Scheduler;
+import org.quartz.SchedulerException;
+import org.quartz.impl.StdSchedulerFactory;
+
+public class Principal {
+
+    private static final String DRP_ACTIVO = ResourceBundle.getBundle(Constantes.PROPERTIES).getString("DRP_ACTIVO");
+    private static final String DRP_COPIA_CARPETAS_ACTIVO = ResourceBundle.getBundle(Constantes.PROPERTIES).getString("DRP_COPIA_CARPETAS_ACTIVO");
+    private static final String RESPADOS_CARPETAS_ACTIVO = ResourceBundle.getBundle(Constantes.PROPERTIES).getString("RESPADOS_CARPETAS_ACTIVO");
+    private static final String RESPADOS_MYSQL_ACTIVO = ResourceBundle.getBundle(Constantes.PROPERTIES).getString("RESPADOS_MYSQL_ACTIVO");
+    private static final String MONITOREO_PUERTOS_ACTIVO = ResourceBundle.getBundle(Constantes.PROPERTIES).getString("MONITOREO_PUERTOS_ACTIVO");
+
+    private static final Logger LOG = Logger.getLogger(Principal.class.getName());
+
+    private static final String RESPALDO_MYSQL = "Respaldo MySQL";
+    private static final String RESPALDO_EXITOSO = "El respaldo fue exitoso";
+    private static final String RESPALDO_NO_EXITOSO = "Al menos un respaldo tuvo errores";
+
+    public static void main(String[] args) {
+        /* Use an appropriate Look and Feel */
+        try {
+            UIManager.setLookAndFeel("com.sun.java.swing.plaf.windows.WindowsLookAndFeel");
+            //UIManager.setLookAndFeel("javax.swing.plaf.metal.MetalLookAndFeel");
+        } catch (UnsupportedLookAndFeelException | IllegalAccessException | InstantiationException | ClassNotFoundException ex) {
+            LOG.error(ex);
+        }
+        /* Turn off metal's use of bold fonts */
+        UIManager.put("swing.boldMetal", Boolean.FALSE);
+        //Schedule a job for the event-dispatching thread:
+        //adding TrayIcon.
+        SwingUtilities.invokeLater(() -> {
+            startQuartz();
+            createAndShowGUI();
+        });
+    }
+
+    private static void startQuartz() {
+        try {
+            try {
+                // Grab the Scheduler instance from the Factory 
+                Scheduler scheduler = StdSchedulerFactory.getDefaultScheduler();
+                scheduler.start();
+            } catch (SchedulerException se) {
+                LOG.error(se);
+            }
+
+        } catch (Exception exc) {
+            LOG.error(exc);
+        }
+    }
+
+    private static void createAndShowGUI() {
+        //Check the SystemTray support
+        if (!SystemTray.isSupported()) {
+            LOG.debug("SystemTray is not supported");
+            return;
+        }
+        final PopupMenu popup = new PopupMenu();
+        final TrayIcon trayIcon
+                = new TrayIcon(createImage("images/bulb.gif", "tray icon"));
+        final SystemTray tray = SystemTray.getSystemTray();
+
+        // Create a popup menu components
+        MenuItem aboutItem = new MenuItem("Acerca");
+        Menu displayMenu = new Menu("Ejecutar");
+        MenuItem todoslosrespaldosItem = new MenuItem("Todos los respaldos");
+        MenuItem respaldoarthasItem = new MenuItem(RESPALDO_MYSQL);
+        MenuItem respaldodgeciItem = new MenuItem("Respaldo DGECI");
+        MenuItem respaldoeneoItem = new MenuItem("Respaldo ENEO");
+        MenuItem monitoreodepuertosItem = new MenuItem("Monitoreo de Puertos");
+        MenuItem respadocarpetasItem = new MenuItem("Respaldo Carpetas Servidores");
+        MenuItem respadosvnItem = new MenuItem("Respaldo SVN");
+        MenuItem ejecutaDRPItem = new MenuItem("Ejecuta DRP");
+        MenuItem ejecutaDRPCopiaCarpetasItem = new MenuItem("Ejecuta DRP Copia Carpetas Servidor");
+        MenuItem exitItem = new MenuItem("Salir");
+
+        //Add components to popup menu
+        popup.add(aboutItem);
+        popup.addSeparator();
+        popup.add(displayMenu);
+        displayMenu.add(todoslosrespaldosItem);
+        displayMenu.add(respaldoarthasItem);
+        displayMenu.add(respaldodgeciItem);
+        displayMenu.add(respaldoeneoItem);
+        displayMenu.add(monitoreodepuertosItem);
+        displayMenu.add(respadocarpetasItem);
+        displayMenu.add(respadosvnItem);
+        displayMenu.add(ejecutaDRPItem);
+        displayMenu.add(ejecutaDRPCopiaCarpetasItem);
+
+        popup.add(exitItem);
+
+        trayIcon.setPopupMenu(popup);
+
+        try {
+            tray.add(trayIcon);
+        } catch (AWTException e) {
+            LOG.error("TrayIcon could not be added.");
+            return;
+        }
+
+        trayIcon.addActionListener((ActionEvent e) -> {
+            JOptionPane.showMessageDialog(null,
+                    "Este programa ha sido creado por Turbinux: \nDRP_ACTIVO " + DRP_ACTIVO + "\nDRP_COPIA_CARPETAS_ACTIVO " + DRP_COPIA_CARPETAS_ACTIVO + "\nRESPADOS_CARPETAS_ACTIVO " + RESPADOS_CARPETAS_ACTIVO + "\nRESPADOS_MYSQL_ACTIVO " + RESPADOS_MYSQL_ACTIVO + "\nMONITOREO_PUERTOS_ACTIVO " + MONITOREO_PUERTOS_ACTIVO);
+        });
+
+        aboutItem.addActionListener((ActionEvent e) -> {
+            JOptionPane.showMessageDialog(null,
+                    "Este programa ha sido creado por Turbinux: \nDRP_ACTIVO " + DRP_ACTIVO + "\nDRP_COPIA_CARPETAS_ACTIVO " + DRP_COPIA_CARPETAS_ACTIVO + "\nRESPADOS_CARPETAS_ACTIVO " + RESPADOS_CARPETAS_ACTIVO + "\nRESPADOS_MYSQL_ACTIVO " + RESPADOS_MYSQL_ACTIVO + "\nMONITOREO_PUERTOS_ACTIVO " + MONITOREO_PUERTOS_ACTIVO);
+        });
+
+        ActionListener listener = (ActionEvent e) -> {
+            MenuItem item = (MenuItem) e.getSource();
+            LOG.debug("item " + item.getLabel());
+            if (null != item.getLabel()) {
+                switch (item.getLabel()) {
+                    case "Todos los respaldos": {
+                        boolean exito = EjecutaRespaldosMySQL.ejecutaRespaldoTodos();
+                        if (exito) {
+                            JOptionPane.showMessageDialog(null, RESPALDO_EXITOSO, "OK", JOptionPane.INFORMATION_MESSAGE);
+                        } else {
+                            JOptionPane.showMessageDialog(null, RESPALDO_NO_EXITOSO, "ERROR", JOptionPane.ERROR_MESSAGE);
+                        }
+                        break;
+                    }
+                    case RESPALDO_MYSQL: {
+                        boolean exito = EjecutaRespaldosMySQL.ejecutaRespaldoArthas();
+                        if (exito) {
+                            JOptionPane.showMessageDialog(null, RESPALDO_EXITOSO, "OK", JOptionPane.INFORMATION_MESSAGE);
+                        } else {
+                            JOptionPane.showMessageDialog(null, RESPALDO_NO_EXITOSO, "ERROR", JOptionPane.ERROR_MESSAGE);
+                        }
+                        break;
+                    }
+                    case "Respaldo DGECI": {
+                        boolean exito = EjecutaRespaldosMySQL.ejecutaRespaldoDGECI();
+                        if (exito) {
+                            JOptionPane.showMessageDialog(null, RESPALDO_EXITOSO, "OK", JOptionPane.INFORMATION_MESSAGE);
+                        } else {
+                            JOptionPane.showMessageDialog(null, RESPALDO_NO_EXITOSO, "ERROR", JOptionPane.ERROR_MESSAGE);
+                        }
+                        break;
+                    }
+                    case "Respaldo ENEO": {
+                        boolean exito = EjecutaRespaldosMySQL.ejecutaRespaldoENEO();
+                        if (exito) {
+                            JOptionPane.showMessageDialog(null, RESPALDO_EXITOSO, "OK", JOptionPane.INFORMATION_MESSAGE);
+                        } else {
+                            JOptionPane.showMessageDialog(null, RESPALDO_NO_EXITOSO, "ERROR", JOptionPane.ERROR_MESSAGE);
+                        }
+                        break;
+                    }
+                    case "Monitoreo de Puertos":
+                        MonitoreoTurbinux.ejecutaActividad();
+                        JOptionPane.showMessageDialog(null, "Monitoreo terminado", "OK", JOptionPane.INFORMATION_MESSAGE);
+                        break;
+                    case "Respaldo SVN":
+                        JOptionPane.showMessageDialog(null, "Funcion no implementada", "ERROR", JOptionPane.ERROR_MESSAGE);
+                        break;
+                    case "Respaldo Carpetas Servidores":
+                        EjecutaRespaldosCarpeta.ejecutaRespaldoTodos();
+                        JOptionPane.showMessageDialog(null, "Respaldo terminado", "OK", JOptionPane.INFORMATION_MESSAGE);
+                        break;
+                    case "Ejecuta DRP":
+                        EjecutaDRP.ejecutaDRP();
+                        JOptionPane.showMessageDialog(null, "DRP Terminado", "OK", JOptionPane.INFORMATION_MESSAGE);
+                        break;
+                    case "Ejecuta DRP Copia Carpetas Servidor":
+                        EjecutaDRPCopiaCarpetas.ejecutaDRPCopiaCarpetas();
+                        JOptionPane.showMessageDialog(null, "DRP Copiado de Carpetas Terminado", "OK", JOptionPane.INFORMATION_MESSAGE);
+                        break;
+                    default:
+                        break;
+                }
+            }
+        };
+
+        todoslosrespaldosItem.addActionListener(listener);
+        respaldoarthasItem.addActionListener(listener);
+        respaldodgeciItem.addActionListener(listener);
+        respaldoeneoItem.addActionListener(listener);
+        monitoreodepuertosItem.addActionListener(listener);
+        respadocarpetasItem.addActionListener(listener);
+        respadosvnItem.addActionListener(listener);
+        ejecutaDRPItem.addActionListener(listener);
+        ejecutaDRPCopiaCarpetasItem.addActionListener(listener);
+
+        exitItem.addActionListener((ActionEvent e) -> {
+            tray.remove(trayIcon);
+            throw new RuntimeException("Termino del programa");
+            //Se arroja la excepcion en lugar de mandar llamar System.exit(0); para hacerlo mas compatible (recomendacion de findbugs)
+            //System.exit(0);
+        });
+    }
+
+    //Obtain the image URL
+    protected static Image createImage(String path, String description) {
+        URL imageURL = Principal.class.getResource(path);
+
+        if (imageURL == null) {
+            LOG.error("Resource not found: " + path);
+            return null;
+        } else {
+            return (new ImageIcon(imageURL, description)).getImage();
+        }
+    }
+}

@@ -1,0 +1,98 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package com.turbinux.util;
+
+/**
+ *
+ * @author javier.torres
+ */
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
+import org.apache.log4j.Logger;
+
+public class UtileriasZipArchivo {
+
+    private static final Logger LOG = Logger.getLogger(UtileriasZipArchivo.class);
+
+    public static void main(String[] args) {
+        zipeaArchivo(new File("TextFiles.zip"), new File("sample.txt"));
+    }
+
+    public static boolean zipeaArchivo(File zip, File file) {
+        boolean exito = true;
+        try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(zip))) {
+            String name = file.getName();
+            ZipEntry entry = new ZipEntry(name);
+            zos.putNextEntry(entry);
+
+            try (FileInputStream fis = new FileInputStream(file)) {
+
+                byte[] byteBuffer = new byte[1024];
+                int bytesRead;
+                while ((bytesRead = fis.read(byteBuffer)) != -1) {
+                    zos.write(byteBuffer, 0, bytesRead);
+                }
+                zos.flush();
+            }
+            zos.closeEntry();
+            zos.flush();
+        } catch (IOException exc) {
+            LOG.error(exc);
+            exito = false;
+        }
+        return exito;
+    }
+
+    public static void unZip(String zipFile, String outputFolder) {
+
+        byte[] buffer = new byte[1024];
+
+        try {
+
+            //create output directory is not exists
+            File folder = new File(outputFolder);
+            if (!folder.exists()) {
+                folder.mkdir();
+            }
+
+            //get the zipped file list entry
+            try ( //get the zip file content
+                    ZipInputStream zis = new ZipInputStream(new FileInputStream(zipFile))) {
+                //get the zipped file list entry
+                ZipEntry ze = zis.getNextEntry();
+
+                while (ze != null) {
+
+                    String fileName = ze.getName();
+                    File newFile = new File(outputFolder + File.separator + fileName);
+
+                    System.out.println("file unzip : " + newFile.getAbsoluteFile());
+
+                    //create all non exists folders
+                    //else you will hit FileNotFoundException for compressed folder
+                    new File(newFile.getParent()).mkdirs();
+
+                    try (FileOutputStream fos = new FileOutputStream(newFile)) {
+                        int len;
+                        while ((len = zis.read(buffer)) > 0) {
+                            fos.write(buffer, 0, len);
+                        }
+                    }
+                    ze = zis.getNextEntry();
+                }
+                zis.closeEntry();
+            }
+
+        } catch (IOException ex) {
+            LOG.error(ex);
+        }
+    }
+}
