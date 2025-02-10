@@ -23,13 +23,14 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { insertBackupConfigSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
+import type { BackupConfig } from "@shared/schema";
 
 const configSchema = insertBackupConfigSchema.extend({
   databases: z.string().transform(s => s.split(',').map(d => d.trim())),
 });
 
 export default function BackupsPage() {
-  const { data: configs } = useQuery({
+  const { data: configs = [] } = useQuery<BackupConfig[]>({
     queryKey: ['/api/configs']
   });
 
@@ -83,7 +84,7 @@ export default function BackupsPage() {
         <section>
           <h2 className="text-3xl font-bold mb-4">Backup Configurations</h2>
           <div className="grid md:grid-cols-2 gap-4">
-            {configs?.map((config) => (
+            {configs.map((config) => (
               <Card key={config.id}>
                 <CardHeader>
                   <div className="flex justify-between items-start">
@@ -141,7 +142,7 @@ export default function BackupsPage() {
                       </FormItem>
                     )}
                   />
-                  
+
                   <div className="grid md:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
@@ -155,7 +156,7 @@ export default function BackupsPage() {
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={form.control}
                       name="port"
@@ -183,7 +184,7 @@ export default function BackupsPage() {
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={form.control}
                       name="password"
