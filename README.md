@@ -1,101 +1,85 @@
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-     sudo apt-get install -y nodejs
-     ```
-   - macOS con Homebrew:
-     ```bash
-     brew install node@20
+node --version  # Debe mostrar v20.x.x
+     npm --version   # Debe mostrar 8.x.x o superior
      ```
 
-2. Verificar la instalación:
-   ```bash
-   node --version  # Debe mostrar v20.x.x
-   npm --version   # Debe mostrar 8.x.x o superior
-   ```
+2. Clonar el repositorio:
+   - Instalar Git desde [git-scm.com](https://git-scm.com/download/win)
+   - Abrir Command Prompt y ejecutar:
+     ```cmd
+     git clone <tu-repositorio>
+     cd <directorio>
+     ```
 
-3. Clonar el repositorio:
-   ```bash
-   git clone <tu-repositorio>
-   cd <directorio>
-   ```
-
-4. Instalar dependencias:
-   ```bash
+3. Instalar dependencias:
+   ```cmd
    npm install
    ```
 
-### Ambiente de Producción (Servidor)
+4. Configurar archivo `.env`:
+   - Crear un archivo llamado `.env` en la carpeta del proyecto
+   - Copiar y ajustar el siguiente contenido:
+     ```env
+     # Base de datos
+     DATABASE_URL=postgresql://usuario:contraseña@localhost:5432/nombre_db
 
-1. Requisitos del servidor:
-   - Ubuntu 20.04 o superior recomendado
-   - 2GB RAM mínimo
-   - 20GB espacio en disco
+     # SMTP para emails
+     SMTP_HOST=smtp.ejemplo.com
+     SMTP_PORT=587
+     SMTP_USER=usuario
+     SMTP_PASS=contraseña
+     SMTP_FROM=respaldos@tudominio.com
+     NOTIFICATION_EMAILS=admin@tudominio.com
 
-2. Instalar Node.js 20:
-   ```bash
-   curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-   sudo apt-get install -y nodejs
-   ```
+     # Directorio para respaldos (usar doble backslash en Windows)
+     BACKUP_DIR=C:\\respaldos\\mysql
+     ```
 
-3. Instalar PostgreSQL:
-   ```bash
-   sudo apt update
-   sudo apt install postgresql postgresql-contrib
-   ```
-
-4. Configurar PostgreSQL:
-   ```bash
-   sudo -u postgres createuser --interactive
-   sudo -u postgres createdb nombre_db
-   ```
-
-5. Configurar variables de entorno:
-   Crear archivo `.env` con:
-   ```env
-   # Base de datos
-   DATABASE_URL=postgresql://usuario:contraseña@localhost:5432/nombre_db
-
-   # SMTP para emails
-   SMTP_HOST=smtp.ejemplo.com
-   SMTP_PORT=587
-   SMTP_USER=usuario
-   SMTP_PASS=contraseña
-   SMTP_FROM=respaldos@tudominio.com
-   NOTIFICATION_EMAILS=admin@tudominio.com
-
-   # Directorio para respaldos
-   BACKUP_DIR=/ruta/a/directorio/respaldos
-   ```
-
-6. Inicializar la base de datos:
-   ```bash
-   npm run db:push
-   ```
-
-7. Compilar la aplicación:
-   ```bash
-   npm run build
-   ```
-
-8. Iniciar en producción:
-   ```bash
-   npm start
+5. Iniciar en desarrollo:
+   ```cmd
+   npm run dev
    ```
 
 La aplicación estará disponible en `http://localhost:5000`
 
-## Verificación de la Instalación
+## Despliegue en Servidor Windows
 
-1. Verificar que el servidor web responde:
-   ```bash
-   curl http://localhost:5000
-   ```
+1. Requisitos del servidor:
+   - Windows Server 2019 o superior
+   - Mínimo 2GB RAM
+   - 20GB espacio en disco
 
-2. Verificar conexión a la base de datos:
-   ```bash
+2. Instalar PostgreSQL:
+   - Descargar PostgreSQL desde [postgresql.org](https://www.postgresql.org/download/windows/)
+   - Durante la instalación:
+     - Anotar la contraseña del usuario postgres
+     - Mantener el puerto por defecto (5432)
+     - Instalar todos los componentes ofrecidos
+
+3. Crear base de datos:
+   - Abrir pgAdmin 4 (instalado con PostgreSQL)
+   - Crear un nuevo usuario y base de datos
+   - Anotar las credenciales para el archivo `.env`
+
+4. Instalar Node.js:
+   - Descargar e instalar Node.js 20 desde [nodejs.org](https://nodejs.org/)
+   - Verificar la instalación en PowerShell:
+     ```powershell
+     node --version
+     npm --version
+     ```
+
+5. Configurar la aplicación:
+   - Clonar el repositorio en el servidor
+   - Instalar dependencias: `npm install`
+   - Crear y configurar el archivo `.env`
+   - Crear el directorio para respaldos y dar permisos
+
+6. Inicializar base de datos:
+   ```cmd
    npm run db:push
    ```
 
-3. Verificar permisos del directorio de respaldos:
-   ```bash
-   sudo chown -R nodeuser:nodeuser $BACKUP_DIR
-   sudo chmod 755 $BACKUP_DIR
+7. Compilar e iniciar:
+   ```cmd
+   npm run build
+   npm start
