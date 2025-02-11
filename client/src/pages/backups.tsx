@@ -48,9 +48,9 @@ export default function BackupsPage() {
       username: "",
       password: "",
       databases: "",
-      schedule: "0 0 * * *",
+      schedule: "0 12 * * *", // Default to noon daily
       enabled: true,
-      retention: 30
+      retention: 1095 // Default to 3 years
     }
   });
 
