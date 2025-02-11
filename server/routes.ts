@@ -54,6 +54,35 @@ export function registerRoutes(app: Express): Server {
     res.json(config);
   });
 
+  app.delete('/api/configs/:id', async (req, res) => {
+    try {
+      const config = await storage.getBackupConfig(parseInt(req.params.id));
+      if (!config) {
+        return res.status(404).json({ error: 'Config not found' });
+      }
+
+      // Cancelar el backup programado antes de eliminar
+      cancelBackup(config.id);
+      await storage.deleteBackupConfig(config.id);
+
+      // Log the deletion
+      await storage.insertSystemLog({
+        type: 'system',
+        level: 'info',
+        message: `Configuración de respaldo eliminada: ${config.name}`,
+        metadata: JSON.stringify({
+          configId: config.id,
+          name: config.name
+        })
+      });
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Failed to delete backup config:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get('/api/logs', async (req, res) => {
     const logs = await storage.getBackupLogs();
     res.json(logs);
@@ -91,7 +120,7 @@ export function registerRoutes(app: Express): Server {
 
       const savedLog = await storage.insertBackupLog(errorLog);
 
-      res.status(500).json({ 
+      res.status(500).json({
         status: 'failed',
         error: error.message,
         log: savedLog

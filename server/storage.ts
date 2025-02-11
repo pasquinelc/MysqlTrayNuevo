@@ -29,6 +29,7 @@ export interface IStorage {
   // Add new methods for system logs
   getSystemLogs(): Promise<SystemLog[]>;
   insertSystemLog(log: Omit<SystemLog, "id" | "timestamp">): Promise<SystemLog>;
+  deleteBackupConfig(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -137,6 +138,10 @@ export class DatabaseStorage implements IStorage {
     broadcast({ type: 'SYSTEM_LOG', log: savedLog });
 
     return savedLog;
+  }
+
+  async deleteBackupConfig(id: number): Promise<void> {
+    await db.delete(backupConfigs).where(eq(backupConfigs.id, id));
   }
 }
 

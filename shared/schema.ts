@@ -46,7 +46,7 @@ export const systemLogs = mysqlTable("system_logs", {
 // Actualizar el esquema de inserción con validaciones más flexibles
 export const insertBackupConfigSchema = createInsertSchema(backupConfigs, {
   port: z.number().min(1).max(65535),
-  retention: z.number().min(1).max(365),
+  retention: z.number().min(1).max(3650), // Aumentado a 10 años
   databases: z.string().array().nonempty(),
   schedule: z.string().regex(/^[0-9*\-,/\s]+$/, "Debe ser una expresión cron válida")
 }).omit({ 

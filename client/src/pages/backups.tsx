@@ -24,6 +24,18 @@ import { z } from "zod";
 import { insertBackupConfigSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import type { BackupConfig } from "@shared/schema";
+import { Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const configSchema = insertBackupConfigSchema.extend({
   databases: z.string().transform(s => s.split(',').map(d => d.trim()).filter(Boolean)),
@@ -100,6 +112,26 @@ export default function BackupsPage() {
     }
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (configId: number) => {
+      await apiRequest('DELETE', `/api/configs/${configId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/configs'] });
+      toast({
+        title: "Configuración eliminada",
+        description: "La configuración de respaldo ha sido eliminada exitosamente."
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error al eliminar configuración",
+        description: error.message || "Hubo un error al eliminar la configuración de respaldo.",
+        variant: "destructive"
+      });
+    }
+  });
+
   return (
     <div className="container mx-auto py-8">
       <div className="grid gap-8">
@@ -114,7 +146,38 @@ export default function BackupsPage() {
                       <CardTitle>{config.name}</CardTitle>
                       <CardDescription>{config.databases.join(', ')}</CardDescription>
                     </div>
-                    <Switch checked={config.enabled ?? false} />
+                    <div className="flex items-center gap-2">
+                      <Switch checked={config.enabled ?? false} />
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive hover:text-destructive/90"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>¿Eliminar configuración?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Esta acción no se puede deshacer. Se eliminará la configuración
+                              de respaldo "{config.name}" y se detendrán futuros respaldos programados.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteMutation.mutate(config.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Eliminar
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
