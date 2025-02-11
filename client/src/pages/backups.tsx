@@ -27,6 +27,8 @@ import type { BackupConfig } from "@shared/schema";
 
 const configSchema = insertBackupConfigSchema.extend({
   databases: z.string().transform(s => s.split(',').map(d => d.trim()).filter(Boolean)),
+  port: z.coerce.number().min(1).max(65535),
+  retention: z.coerce.number().min(1).max(365)
 });
 
 export default function BackupsPage() {
