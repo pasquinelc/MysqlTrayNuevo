@@ -34,7 +34,13 @@ export const settings = mysqlTable("settings", {
   value: text("value").notNull(),
 });
 
-export const insertBackupConfigSchema = createInsertSchema(backupConfigs).omit({ 
+// Actualizar el esquema de inserción con validaciones más flexibles
+export const insertBackupConfigSchema = createInsertSchema(backupConfigs, {
+  port: z.number().min(1).max(65535),
+  retention: z.number().min(1).max(365),
+  databases: z.string().array().nonempty(),
+  schedule: z.string().regex(/^[0-9*\-,/\s]+$/, "Debe ser una expresión cron válida")
+}).omit({ 
   id: true 
 });
 
