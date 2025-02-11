@@ -19,6 +19,17 @@ export function registerRoutes(app: Express): Server {
   // Initialize backup scheduler
   initializeScheduler().catch(console.error);
 
+  // Log server start
+  storage.insertSystemLog({
+    type: 'system',
+    level: 'info',
+    message: 'Servidor iniciado correctamente',
+    metadata: JSON.stringify({
+      time: new Date().toISOString(),
+      environment: process.env.NODE_ENV
+    })
+  }).catch(console.error);
+
   // API Routes
   app.get('/api/configs', async (req, res) => {
     const configs = await storage.getAllBackupConfigs();

@@ -6,12 +6,34 @@ import { createGzip } from 'zlib';
 import { pipeline } from 'stream/promises';
 import { spawn } from 'child_process';
 import { BackupConfig, BackupLog } from '@shared/schema';
+import { storage } from '../storage';
 
 const execAsync = promisify(exec);
+
+async function logToSystem(level: 'info' | 'warning' | 'error', message: string, metadata?: any) {
+  try {
+    await storage.insertSystemLog({
+      type: 'backup',
+      level,
+      message,
+      metadata: metadata ? JSON.stringify(metadata) : null
+    });
+  } catch (logError) {
+    console.error('Error al registrar en system_logs:', logError);
+  }
+}
 
 export async function performBackup(config: BackupConfig): Promise<BackupLog> {
   const startTime = new Date();
   const backupDir = process.env.BACKUP_DIR || './backups';
+
+  await logToSystem('info', `Iniciando respaldo para ${config.name}`, {
+    config: {
+      name: config.name,
+      databases: config.databases,
+      host: config.host
+    }
+  });
 
   try {
     // Ensure backup directory exists
@@ -27,9 +49,12 @@ export async function performBackup(config: BackupConfig): Promise<BackupLog> {
         `mysql --host=${config.host} --port=${config.port} --user=${config.username} --password=${config.password} -e "SELECT 1"`,
         { maxBuffer: 1024 * 1024 * 10 }
       );
-      console.log('MySQL connection test successful');
+      await logToSystem('info', 'Prueba de conexión MySQL exitosa');
     } catch (connError: any) {
-      console.error('MySQL connection test failed:', connError.message);
+      await logToSystem('error', 'Fallo en la prueba de conexión MySQL', {
+        error: connError.message,
+        stack: connError.stack
+      });
       return {
         id: 0,
         configId: config.id,
@@ -67,7 +92,7 @@ export async function performBackup(config: BackupConfig): Promise<BackupLog> {
       const message = data.toString();
       errorOutput += message;
       if (!message.includes('Using a password on the command line interface can be insecure')) {
-        console.warn('mysqldump warning:', message);
+        logToSystem('warning', 'Advertencia de mysqldump', { message });
       }
     });
 
@@ -93,6 +118,11 @@ export async function performBackup(config: BackupConfig): Promise<BackupLog> {
         throw new Error('Backup file is empty');
       }
 
+      await logToSystem('info', 'Respaldo completado exitosamente', {
+        fileSize: stats.size,
+        path: gzOutputPath
+      });
+
       return {
         id: 0,
         configId: config.id,
@@ -109,15 +139,23 @@ export async function performBackup(config: BackupConfig): Promise<BackupLog> {
       // Clean up the incomplete backup file
       try {
         await fs.unlink(gzOutputPath);
+        await logToSystem('warning', 'Archivo de respaldo incompleto eliminado', {
+          path: gzOutputPath
+        });
       } catch (unlinkError) {
-        console.error('Failed to remove incomplete backup file:', unlinkError);
+        await logToSystem('error', 'Error al eliminar archivo de respaldo incompleto', {
+          error: unlinkError
+        });
       }
 
       throw streamError;
     }
 
   } catch (error: any) {
-    console.error('Backup failed:', error);
+    await logToSystem('error', 'Error durante el proceso de respaldo', {
+      error: error.message,
+      stack: error.stack
+    });
 
     return {
       id: 0,
@@ -139,11 +177,13 @@ export async function performBackup(config: BackupConfig): Promise<BackupLog> {
 
 export async function verifyBackup(filePath: string): Promise<boolean> {
   try {
+    await logToSystem('info', 'Iniciando verificación de respaldo', { path: filePath });
     const command = `gzip -d -c "${filePath}" | mysql --verbose --help > /dev/null`;
     await execAsync(command, { maxBuffer: 1024 * 1024 * 10 }); // 10MB buffer for verification
+    await logToSystem('info', 'Verificación de respaldo exitosa');
     return true;
   } catch (error) {
-    console.error('Backup verification failed:', error);
+    await logToSystem('error', 'Fallo en la verificación de respaldo', { error });
     return false;
   }
 }

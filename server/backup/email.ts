@@ -4,12 +4,12 @@ import { storage } from '../storage';
 
 // Crear el transportador de correo con logging detallado
 const transporter = nodemailer.createTransport({
-  host: process.env.MAIL_SMTP_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.MAIL_SMTP_PORT || '587'),
-  secure: process.env.MAIL_SMTP_PORT === '465', // true para 465, false para otros puertos
+  host: process.env.SMTP_HOST,
+  port: parseInt(process.env.SMTP_PORT || '587'),
+  secure: process.env.SMTP_PORT === '465', // true para 465, false para otros puertos
   auth: {
-    user: process.env.MAIL_SMTP_USER || 'facturacion@turbinux.com',
-    pass: process.env.MAIL_SMTP_PASSWORD
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS
   },
   debug: true, // Habilitar debugging
   logger: true // Log en la consola
@@ -36,10 +36,10 @@ async function logToSystem(level: 'info' | 'warning' | 'error', message: string,
 
 async function validateEmailConfig() {
   const requiredVars = [
-    'MAIL_SMTP_HOST',
-    'MAIL_SMTP_PORT',
-    'MAIL_SMTP_USER',
-    'MAIL_SMTP_PASSWORD',
+    'SMTP_HOST',
+    'SMTP_PORT',
+    'SMTP_USER',
+    'SMTP_PASS',
     'EMAIL_DESDE'
   ];
 
@@ -155,17 +155,17 @@ export async function sendDailyReport(logs: BackupLog[]) {
 async function sendEmail(options: EmailOptions) {
   try {
     const smtpConfig = {
-      host: process.env.MAIL_SMTP_HOST,
-      port: process.env.MAIL_SMTP_PORT,
-      user: process.env.MAIL_SMTP_USER,
+      host: process.env.SMTP_HOST,
+      port: process.env.SMTP_PORT,
+      user: process.env.SMTP_USER,
       from: process.env.EMAIL_DESDE,
-      secure: process.env.MAIL_SMTP_PORT === '465'
+      secure: process.env.SMTP_PORT === '465'
     };
 
     await logToSystem('info', 'Intentando enviar email con configuración SMTP', smtpConfig);
 
     const info = await transporter.sendMail({
-      from: process.env.EMAIL_DESDE || 'facturacion@turbinux.com',
+      from: process.env.EMAIL_DESDE,
       ...options
     });
 
