@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { BackupLog, BackupConfig } from '@shared/schema';
+import { storage } from '../storage';
 
 // Crear el transportador de correo con logging detallado
 const transporter = nodemailer.createTransport({
@@ -20,8 +21,17 @@ interface EmailOptions {
   html: string;
 }
 
+async function logToSystem(level: 'info' | 'warning' | 'error', message: string, metadata?: any) {
+  await storage.insertSystemLog({
+    type: 'email',
+    level,
+    message,
+    metadata
+  });
+}
+
 export async function sendBackupNotification(log: BackupLog, config: BackupConfig) {
-  console.log('Preparando notificación de respaldo por correo...');
+  await logToSystem('info', `Preparando notificación de respaldo por correo para ${config.name}`);
   const status = log.status === 'completed' ? 'exitoso' : 'fallido';
   const subject = `Respaldo ${status}: ${config.name}`;
 
@@ -39,20 +49,23 @@ export async function sendBackupNotification(log: BackupLog, config: BackupConfi
   `;
 
   try {
-    console.log('Enviando notificación por correo a:', ['pcc2100@yahoo.com']);
+    await logToSystem('info', `Enviando notificación por correo a: pcc2100@yahoo.com`);
     await sendEmail({
       to: ['pcc2100@yahoo.com'],
       subject,
       html
     });
-    console.log('Notificación de respaldo enviada exitosamente');
-  } catch (error) {
-    console.error('Error al enviar notificación de respaldo:', error);
+    await logToSystem('info', 'Notificación de respaldo enviada exitosamente');
+  } catch (error: any) {
+    await logToSystem('error', 'Error al enviar notificación de respaldo', { 
+      error: error.message,
+      stack: error.stack
+    });
   }
 }
 
 export async function sendDailyReport(logs: BackupLog[]) {
-  console.log('Preparando reporte diario de respaldos...');
+  await logToSystem('info', 'Preparando reporte diario de respaldos...');
   const successful = logs.filter(l => l.status === 'completed').length;
   const failed = logs.filter(l => l.status === 'failed').length;
 
@@ -83,36 +96,44 @@ export async function sendDailyReport(logs: BackupLog[]) {
   `;
 
   try {
-    console.log('Enviando reporte diario a:', ['pcc2100@yahoo.com']);
+    await logToSystem('info', 'Enviando reporte diario a: pcc2100@yahoo.com');
     await sendEmail({
       to: ['pcc2100@yahoo.com'],
       subject: 'Reporte Diario de Respaldos',
       html
     });
-    console.log('Reporte diario enviado exitosamente');
-  } catch (error) {
-    console.error('Error al enviar reporte diario:', error);
+    await logToSystem('info', 'Reporte diario enviado exitosamente');
+  } catch (error: any) {
+    await logToSystem('error', 'Error al enviar reporte diario', {
+      error: error.message,
+      stack: error.stack
+    });
   }
 }
 
 async function sendEmail(options: EmailOptions) {
   try {
-    console.log('Configuración SMTP:', {
+    const smtpConfig = {
       host: process.env.MAIL_SMTP_HOST,
       port: process.env.MAIL_SMTP_PORT,
       user: process.env.MAIL_SMTP_USER,
       from: process.env.EMAIL_DESDE
-    });
+    };
+
+    await logToSystem('info', 'Intentando enviar email con configuración SMTP', smtpConfig);
 
     const info = await transporter.sendMail({
       from: process.env.EMAIL_DESDE || 'facturacion@turbinux.com',
       ...options
     });
 
-    console.log('Email enviado exitosamente:', info.response);
+    await logToSystem('info', 'Email enviado exitosamente', { response: info.response });
     return true;
-  } catch (error) {
-    console.error('Error detallado al enviar email:', error);
-    throw error; // Re-lanzar el error para manejo superior
+  } catch (error: any) {
+    await logToSystem('error', 'Error al enviar email', {
+      error: error.message,
+      stack: error.stack
+    });
+    throw error;
   }
 }

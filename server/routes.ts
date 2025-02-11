@@ -111,5 +111,10 @@ export function registerRoutes(app: Express): Server {
     res.json(stats);
   });
 
+  app.get('/api/system-logs', async (req, res) => {
+    const logs = await storage.getSystemLogs();
+    res.json(logs);
+  });
+
   return httpServer;
 }

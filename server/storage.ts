@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { eq, sql } from "drizzle-orm";
-import { backupConfigs, backupLogs, settings } from "@shared/schema";
+import { backupConfigs, backupLogs, settings, systemLogs, type SystemLog } from "@shared/schema";
 import type { BackupConfig, BackupLog, Setting } from "@shared/schema";
 
 export interface IStorage {
@@ -24,6 +24,10 @@ export interface IStorage {
   getSettings(): Promise<Setting[]>;
   getSetting(key: string): Promise<Setting | undefined>;
   setSetting(key: string, value: string): Promise<Setting>;
+
+  // Add new methods for system logs
+  getSystemLogs(): Promise<SystemLog[]>;
+  insertSystemLog(log: Omit<SystemLog, "id" | "timestamp">): Promise<SystemLog>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -82,7 +86,7 @@ export class DatabaseStorage implements IStorage {
       successfulBackups: successful.length,
       failedBackups: logs.filter(l => l.status === 'failed').length,
       totalSize,
-      lastBackupTime: logs.length > 0 
+      lastBackupTime: logs.length > 0
         ? new Date(Math.max(...logs.map(l => new Date(l.startTime).getTime())))
         : undefined
     };
@@ -107,6 +111,22 @@ export class DatabaseStorage implements IStorage {
 
     const [result] = await db.insert(settings).values({ key, value });
     return { id: result.insertId, key, value };
+  }
+
+  async getSystemLogs(): Promise<SystemLog[]> {
+    return await db.select()
+      .from(systemLogs)
+      .orderBy(sql`${systemLogs.timestamp} DESC`)
+      .limit(100);
+  }
+
+  async insertSystemLog(log: Omit<SystemLog, "id" | "timestamp">): Promise<SystemLog> {
+    const [result] = await db.insert(systemLogs).values(log);
+    return {
+      ...log,
+      id: result.insertId,
+      timestamp: new Date()
+    } as SystemLog;
   }
 }
 

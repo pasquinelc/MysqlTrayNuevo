@@ -34,6 +34,15 @@ export const settings = mysqlTable("settings", {
   value: text("value").notNull(),
 });
 
+export const systemLogs = mysqlTable("system_logs", {
+  id: int("id").primaryKey().autoincrement(),
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+  type: text("type").notNull(), // 'email', 'backup', 'system'
+  level: text("level").notNull(), // 'info', 'warning', 'error'
+  message: text("message").notNull(),
+  metadata: json("metadata"),
+});
+
 // Actualizar el esquema de inserción con validaciones más flexibles
 export const insertBackupConfigSchema = createInsertSchema(backupConfigs, {
   port: z.number().min(1).max(65535),
@@ -54,9 +63,16 @@ export const insertSettingSchema = createInsertSchema(settings).omit({
   id: true 
 });
 
+export const insertSystemLogSchema = createInsertSchema(systemLogs).omit({ 
+  id: true,
+  timestamp: true
+});
+
 export type BackupConfig = typeof backupConfigs.$inferSelect;
 export type BackupLog = typeof backupLogs.$inferSelect;
 export type Setting = typeof settings.$inferSelect;
+export type SystemLog = typeof systemLogs.$inferSelect;
 export type InsertBackupConfig = z.infer<typeof insertBackupConfigSchema>;
 export type InsertBackupLog = z.infer<typeof insertBackupLogSchema>;
 export type InsertSetting = z.infer<typeof insertSettingSchema>;
+export type InsertSystemLog = z.infer<typeof insertSystemLogSchema>;
