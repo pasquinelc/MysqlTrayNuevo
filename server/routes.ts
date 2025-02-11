@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { WebSocketServer } from 'ws';
+import { WebSocketServer, WebSocket } from 'ws';
 import { storage } from "./storage";
 import { initializeScheduler, scheduleBackup, cancelBackup } from './backup/scheduler';
 import { performBackup } from './backup/mysql';
@@ -12,7 +12,7 @@ export function registerRoutes(app: Express): Server {
   // WebSocket handler for real-time updates
   wss.on('connection', (ws) => {
     console.log('Client connected');
-    
+
     ws.on('close', () => {
       console.log('Client disconnected');
     });
