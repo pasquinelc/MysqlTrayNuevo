@@ -1,14 +1,17 @@
 import nodemailer from 'nodemailer';
 import { BackupLog, BackupConfig } from '@shared/schema';
 
+// Crear el transportador de correo con logging detallado
 const transporter = nodemailer.createTransport({
   host: process.env.MAIL_SMTP_HOST || 'smtp.gmail.com',
   port: parseInt(process.env.MAIL_SMTP_PORT || '465'),
-  secure: true, // for port 465
+  secure: true, // true para 465, false para otros puertos
   auth: {
     user: process.env.MAIL_SMTP_USER || 'facturacion@turbinux.com',
     pass: process.env.MAIL_SMTP_PASSWORD
-  }
+  },
+  debug: true, // Habilitar debugging
+  logger: true // Log en la consola
 });
 
 interface EmailOptions {
@@ -18,6 +21,7 @@ interface EmailOptions {
 }
 
 export async function sendBackupNotification(log: BackupLog, config: BackupConfig) {
+  console.log('Preparando notificación de respaldo por correo...');
   const status = log.status === 'completed' ? 'exitoso' : 'fallido';
   const subject = `Respaldo ${status}: ${config.name}`;
 
@@ -34,14 +38,21 @@ export async function sendBackupNotification(log: BackupLog, config: BackupConfi
     ${log.error ? `<p>Error: ${log.error}</p>` : ''}
   `;
 
-  await sendEmail({
-    to: ['pcc2100@yahoo.com'],
-    subject,
-    html
-  });
+  try {
+    console.log('Enviando notificación por correo a:', ['pcc2100@yahoo.com']);
+    await sendEmail({
+      to: ['pcc2100@yahoo.com'],
+      subject,
+      html
+    });
+    console.log('Notificación de respaldo enviada exitosamente');
+  } catch (error) {
+    console.error('Error al enviar notificación de respaldo:', error);
+  }
 }
 
 export async function sendDailyReport(logs: BackupLog[]) {
+  console.log('Preparando reporte diario de respaldos...');
   const successful = logs.filter(l => l.status === 'completed').length;
   const failed = logs.filter(l => l.status === 'failed').length;
 
@@ -71,21 +82,37 @@ export async function sendDailyReport(logs: BackupLog[]) {
     </table>
   `;
 
-  await sendEmail({
-    to: ['pcc2100@yahoo.com'],
-    subject: 'Reporte Diario de Respaldos',
-    html
-  });
+  try {
+    console.log('Enviando reporte diario a:', ['pcc2100@yahoo.com']);
+    await sendEmail({
+      to: ['pcc2100@yahoo.com'],
+      subject: 'Reporte Diario de Respaldos',
+      html
+    });
+    console.log('Reporte diario enviado exitosamente');
+  } catch (error) {
+    console.error('Error al enviar reporte diario:', error);
+  }
 }
 
 async function sendEmail(options: EmailOptions) {
   try {
-    await transporter.sendMail({
+    console.log('Configuración SMTP:', {
+      host: process.env.MAIL_SMTP_HOST,
+      port: process.env.MAIL_SMTP_PORT,
+      user: process.env.MAIL_SMTP_USER,
+      from: process.env.EMAIL_DESDE
+    });
+
+    const info = await transporter.sendMail({
       from: process.env.EMAIL_DESDE || 'facturacion@turbinux.com',
       ...options
     });
-    console.log('Email sent successfully');
+
+    console.log('Email enviado exitosamente:', info.response);
+    return true;
   } catch (error) {
-    console.error('Failed to send email:', error);
+    console.error('Error detallado al enviar email:', error);
+    throw error; // Re-lanzar el error para manejo superior
   }
 }
