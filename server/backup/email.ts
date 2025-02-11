@@ -2,17 +2,17 @@ import nodemailer from 'nodemailer';
 import { BackupLog, BackupConfig } from '@shared/schema';
 import { storage } from '../storage';
 
-// Crear el transportador de correo con logging detallado
+// Create mail transporter with detailed logging
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: process.env.SMTP_PORT === '465', // true para 465, false para otros puertos
+  host: process.env.MAIL_SMTP_HOST,
+  port: parseInt(process.env.MAIL_SMTP_PORT || '587'),
+  secure: process.env.MAIL_SMTP_PORT === '465', // true for 465, false for other ports
   auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS
+    user: process.env.MAIL_SMTP_USER,
+    pass: process.env.MAIL_SMTP_PASSWORD
   },
-  debug: true, // Habilitar debugging
-  logger: true // Log en la consola
+  debug: true, // Enable debugging
+  logger: true // Console logging
 });
 
 interface EmailOptions {
@@ -30,16 +30,16 @@ async function logToSystem(level: 'info' | 'warning' | 'error', message: string,
       metadata: metadata ? JSON.stringify(metadata) : null
     });
   } catch (logError) {
-    console.error('Error al registrar en system_logs:', logError);
+    console.error('Error logging to system_logs:', logError);
   }
 }
 
 async function validateEmailConfig() {
   const requiredVars = [
-    'SMTP_HOST',
-    'SMTP_PORT',
-    'SMTP_USER',
-    'SMTP_PASS',
+    'MAIL_SMTP_HOST',
+    'MAIL_SMTP_PORT',
+    'MAIL_SMTP_USER',
+    'MAIL_SMTP_PASSWORD',
     'EMAIL_DESDE'
   ];
 
@@ -155,11 +155,11 @@ export async function sendDailyReport(logs: BackupLog[]) {
 async function sendEmail(options: EmailOptions) {
   try {
     const smtpConfig = {
-      host: process.env.SMTP_HOST,
-      port: process.env.SMTP_PORT,
-      user: process.env.SMTP_USER,
+      host: process.env.MAIL_SMTP_HOST,
+      port: process.env.MAIL_SMTP_PORT,
+      user: process.env.MAIL_SMTP_USER,
       from: process.env.EMAIL_DESDE,
-      secure: process.env.SMTP_PORT === '465'
+      secure: process.env.MAIL_SMTP_PORT === '465'
     };
 
     await logToSystem('info', 'Intentando enviar email con configuración SMTP', smtpConfig);
