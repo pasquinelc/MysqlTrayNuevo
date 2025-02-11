@@ -20,14 +20,14 @@ async function logToSystem(level: 'info' | 'warning' | 'error', message: string,
       metadata: metadata ? JSON.stringify(metadata) : null
     });
   } catch (logError) {
-    console.error('Error al registrar en system_logs:', logError);
+    console.error('Error logging to system_logs:', logError);
   }
 }
 
-export async function performBackup(config: BackupConfig): Promise<BackupLog> {
+export async function performBackup(config: BackupConfig): Promise<BackupLog[]> {
   const startTime = new Date();
   const backupDir = process.env.BACKUP_DIR || './backups';
-  let backupLog: BackupLog;
+  const logs: BackupLog[] = [];
 
   await logToSystem('info', `Iniciando respaldo para ${config.name}`, {
     config: {
@@ -41,10 +41,6 @@ export async function performBackup(config: BackupConfig): Promise<BackupLog> {
     // Ensure backup directory exists
     await fs.mkdir(backupDir, { recursive: true });
 
-    const timestamp = startTime.toISOString().replace(/[:.]/g, '-');
-    const gzFilename = `${config.name}_${timestamp}.sql.gz`;
-    const gzOutputPath = path.join(backupDir, gzFilename);
-
     // Test connection first
     try {
       await execAsync(
@@ -53,11 +49,7 @@ export async function performBackup(config: BackupConfig): Promise<BackupLog> {
       );
       await logToSystem('info', 'Prueba de conexión MySQL exitosa');
     } catch (connError: any) {
-      await logToSystem('error', 'Fallo en la prueba de conexión MySQL', {
-        error: connError.message,
-        stack: connError.stack
-      });
-      backupLog = {
+      const errorLog: BackupLog = {
         id: 0,
         configId: config.id,
         database: config.databases.join(','),
@@ -69,110 +61,117 @@ export async function performBackup(config: BackupConfig): Promise<BackupLog> {
         error: `Failed to connect to MySQL: ${connError.message}`,
         metadata: { error: connError.stack }
       };
-      try {
-        await sendBackupNotification(backupLog, config);
-      } catch (emailError: any) {
-        await logToSystem('error', 'Error al enviar notificación de fallo de conexión', {
-          error: emailError.message,
-          stack: emailError.stack
-        });
-      }
-      return backupLog;
+      logs.push(errorLog);
+      await sendBackupNotification(logs, config);
+      return logs;
     }
 
-    // Use spawn for streaming backup
-    const mysqldump = spawn('mysqldump', [
-      `--host=${config.host}`,
-      `--port=${config.port}`,
-      `--user=${config.username}`,
-      `--password=${config.password}`,
-      '--single-transaction',
-      '--routines',
-      '--triggers',
-      '--databases',
-      ...config.databases
-    ]);
-
-    // Create write stream with gzip compression
-    const gzipStream = createGzip();
-    const writeStream = await fs.open(gzOutputPath, 'w').then(fd => fd.createWriteStream());
-
-    // Collect error messages
-    let errorOutput = '';
-    mysqldump.stderr.on('data', (data) => {
-      const message = data.toString();
-      errorOutput += message;
-      if (!message.includes('Using a password on the command line interface can be insecure')) {
-        logToSystem('warning', 'Advertencia de mysqldump', { message });
-      }
-    });
-
-    // Handle the backup process
-    try {
-      await Promise.race([
-        pipeline(mysqldump.stdout, gzipStream, writeStream),
-        new Promise((resolve, reject) => {
-          mysqldump.on('error', reject);
-          mysqldump.on('exit', (code) => {
-            if (code !== 0) {
-              reject(new Error(`mysqldump exited with code ${code}`));
-            } else {
-              resolve(undefined);
-            }
-          });
-        })
-      ]);
-
-      // Verify if the backup file exists and has content
-      const stats = await fs.stat(gzOutputPath);
-      if (stats.size === 0) {
-        throw new Error('Backup file is empty');
-      }
-
-      await logToSystem('info', 'Respaldo completado exitosamente', {
-        fileSize: stats.size,
-        path: gzOutputPath
-      });
-
-      backupLog = {
-        id: 0,
-        configId: config.id,
-        database: config.databases.join(','),
-        startTime,
-        endTime: new Date(),
-        status: 'completed',
-        fileSize: stats.size,
-        filePath: gzOutputPath,
-        error: null,
-        metadata: { warnings: errorOutput }
-      };
+    // Backup each database individually
+    for (const database of config.databases) {
+      const timestamp = startTime.toISOString().replace(/[:.]/g, '-');
+      const gzFilename = `${config.name}_${database}_${timestamp}.sql.gz`;
+      const gzOutputPath = path.join(backupDir, gzFilename);
 
       try {
-        await sendBackupNotification(backupLog, config);
-      } catch (emailError: any) {
-        await logToSystem('error', 'Error al enviar notificación de respaldo exitoso', {
-          error: emailError.message,
-          stack: emailError.stack
+        // Use spawn for streaming backup
+        const mysqldump = spawn('mysqldump', [
+          `--host=${config.host}`,
+          `--port=${config.port}`,
+          `--user=${config.username}`,
+          `--password=${config.password}`,
+          '--single-transaction',
+          '--routines',
+          '--triggers',
+          database
+        ]);
+
+        // Create write stream with gzip compression
+        const gzipStream = createGzip();
+        const writeStream = await fs.open(gzOutputPath, 'w').then(fd => fd.createWriteStream());
+
+        // Collect error messages
+        let errorOutput = '';
+        mysqldump.stderr.on('data', (data) => {
+          const message = data.toString();
+          errorOutput += message;
+          if (!message.includes('Using a password on the command line interface can be insecure')) {
+            logToSystem('warning', `Advertencia de mysqldump para ${database}`, { message });
+          }
         });
-      }
 
-      return backupLog;
+        // Handle the backup process
+        await Promise.race([
+          pipeline(mysqldump.stdout, gzipStream, writeStream),
+          new Promise((resolve, reject) => {
+            mysqldump.on('error', reject);
+            mysqldump.on('exit', (code) => {
+              if (code !== 0) {
+                reject(new Error(`mysqldump exited with code ${code}`));
+              } else {
+                resolve(undefined);
+              }
+            });
+          })
+        ]);
 
-    } catch (streamError: any) {
-      // Clean up the incomplete backup file
-      try {
-        await fs.unlink(gzOutputPath);
-        await logToSystem('warning', 'Archivo de respaldo incompleto eliminado', {
+        // Verify if the backup file exists and has content
+        const stats = await fs.stat(gzOutputPath);
+        if (stats.size === 0) {
+          throw new Error('Backup file is empty');
+        }
+
+        await logToSystem('info', `Respaldo completado exitosamente para ${database}`, {
+          fileSize: stats.size,
           path: gzOutputPath
         });
-      } catch (unlinkError) {
-        await logToSystem('error', 'Error al eliminar archivo de respaldo incompleto', {
-          error: unlinkError
+
+        logs.push({
+          id: 0,
+          configId: config.id,
+          database,
+          startTime,
+          endTime: new Date(),
+          status: 'completed',
+          fileSize: stats.size,
+          filePath: gzOutputPath,
+          error: null,
+          metadata: { warnings: errorOutput }
+        });
+
+      } catch (streamError: any) {
+        // Clean up the incomplete backup file
+        try {
+          await fs.unlink(gzOutputPath);
+          await logToSystem('warning', `Archivo de respaldo incompleto eliminado para ${database}`, {
+            path: gzOutputPath
+          });
+        } catch (unlinkError) {
+          await logToSystem('error', `Error al eliminar archivo de respaldo incompleto para ${database}`, {
+            error: unlinkError
+          });
+        }
+
+        logs.push({
+          id: 0,
+          configId: config.id,
+          database,
+          startTime,
+          endTime: new Date(),
+          status: 'failed',
+          fileSize: 0,
+          filePath: null,
+          error: streamError.message,
+          metadata: { 
+            error: streamError.stack,
+            command: streamError.cmd
+          }
         });
       }
-
-      throw streamError;
     }
+
+    // Send a single notification with all results
+    await sendBackupNotification(logs, config);
+    return logs;
 
   } catch (error: any) {
     await logToSystem('error', 'Error durante el proceso de respaldo', {
@@ -180,32 +179,27 @@ export async function performBackup(config: BackupConfig): Promise<BackupLog> {
       stack: error.stack
     });
 
-    backupLog = {
-      id: 0,
-      configId: config.id,
-      database: config.databases.join(','),
-      startTime,
-      endTime: new Date(),
-      status: 'failed',
-      fileSize: 0,
-      filePath: null,
-      error: error.message,
-      metadata: { 
-        error: error.stack,
-        command: error.cmd
-      }
-    };
-
-    try {
-      await sendBackupNotification(backupLog, config);
-    } catch (emailError: any) {
-      await logToSystem('error', 'Error al enviar notificación de fallo de respaldo', {
-        error: emailError.message,
-        stack: emailError.stack
+    if (logs.length === 0) {
+      // If we haven't logged any specific database errors, create a general error log
+      logs.push({
+        id: 0,
+        configId: config.id,
+        database: config.databases.join(','),
+        startTime,
+        endTime: new Date(),
+        status: 'failed',
+        fileSize: 0,
+        filePath: null,
+        error: error.message,
+        metadata: { 
+          error: error.stack,
+          command: error.cmd
+        }
       });
     }
 
-    return backupLog;
+    await sendBackupNotification(logs, config);
+    return logs;
   }
 }
 

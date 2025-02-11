@@ -51,26 +51,48 @@ async function validateEmailConfig() {
   }
 }
 
-export async function sendBackupNotification(log: BackupLog, config: BackupConfig) {
+export async function sendBackupNotification(logs: BackupLog[], config: BackupConfig) {
   await logToSystem('info', `Preparando notificación de respaldo por correo para ${config.name}`);
 
   try {
     await validateEmailConfig();
 
-    const status = log.status === 'completed' ? 'exitoso' : 'fallido';
-    const subject = `Respaldo ${status}: ${config.name}`;
+    const successful = logs.filter(l => l.status === 'completed');
+    const failed = logs.filter(l => l.status === 'failed');
+    const allCompleted = failed.length === 0;
 
-    const sizeInMB = log.fileSize ? (log.fileSize / (1024 * 1024)).toFixed(2) : 0;
+    const subject = `Respaldo ${allCompleted ? 'exitoso' : 'con errores'}: ${config.name}`;
+
+    const totalSize = successful.reduce((sum, log) => sum + (log.fileSize || 0), 0);
+    const sizeInMB = (totalSize / (1024 * 1024)).toFixed(2);
 
     const html = `
-      <h2>Respaldo MySQL ${status}</h2>
+      <h2>Resumen de Respaldos MySQL</h2>
       <p>Configuración: ${config.name}</p>
-      <p>Bases de datos: ${log.database}</p>
-      <p>Hora de inicio: ${log.startTime}</p>
-      <p>Hora de finalización: ${log.endTime}</p>
-      <p>Estado: ${log.status}</p>
-      <p>Tamaño del archivo: ${sizeInMB} MB</p>
-      ${log.error ? `<p>Error: ${log.error}</p>` : ''}
+      <p>Total de bases de datos: ${logs.length}</p>
+      <p>Exitosos: ${successful.length}</p>
+      <p>Fallidos: ${failed.length}</p>
+      <p>Tamaño total: ${sizeInMB} MB</p>
+      <p>Hora de inicio: ${logs[0]?.startTime}</p>
+      <p>Hora de finalización: ${logs[logs.length - 1]?.endTime}</p>
+
+      <h3>Detalles por base de datos:</h3>
+      <table border="1" style="border-collapse: collapse;">
+        <tr>
+          <th>Base de datos</th>
+          <th>Estado</th>
+          <th>Tamaño (MB)</th>
+          <th>Error</th>
+        </tr>
+        ${logs.map(log => `
+          <tr>
+            <td>${log.database}</td>
+            <td>${log.status}</td>
+            <td>${log.fileSize ? (log.fileSize / (1024 * 1024)).toFixed(2) : 0}</td>
+            <td>${log.error || ''}</td>
+          </tr>
+        `).join('')}
+      </table>
     `;
 
     await logToSystem('info', `Enviando notificación por correo a: pcc2100@yahoo.com`);

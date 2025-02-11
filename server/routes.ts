@@ -67,10 +67,14 @@ export function registerRoutes(app: Express): Server {
       }
 
       console.log(`Starting backup for config: ${config.name}`);
-      const log = await performBackup(config);
-      const savedLog = await storage.insertBackupLog(log);
+      const logs = await performBackup(config);
 
-      res.json(savedLog);
+      // Guardar todos los logs
+      const savedLogs = await Promise.all(
+        logs.map(log => storage.insertBackupLog(log))
+      );
+
+      res.json(savedLogs[0]); // Mantenemos compatibilidad con el frontend enviando el primer log
     } catch (error: any) {
       console.error('Backup execution failed:', error);
       const errorLog = {

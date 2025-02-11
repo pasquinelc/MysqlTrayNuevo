@@ -57,7 +57,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getBackupLogs(): Promise<BackupLog[]> {
-    return await db.select().from(backupLogs).orderBy(backupLogs.startTime);
+    return await db.select()
+      .from(backupLogs)
+      .orderBy(sql`${backupLogs.startTime} DESC`)
+      .limit(100); // Limitamos a los últimos 100 registros por ahora
   }
 
   async getBackupLogsByDate(date: Date): Promise<BackupLog[]> {
@@ -69,7 +72,8 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(backupLogs)
-      .where(sql`${backupLogs.startTime} >= ${startOfDay} AND ${backupLogs.startTime} <= ${endOfDay}`);
+      .where(sql`${backupLogs.startTime} >= ${startOfDay} AND ${backupLogs.startTime} <= ${endOfDay}`)
+      .orderBy(sql`${backupLogs.startTime} DESC`);
   }
 
   async insertBackupLog(log: Omit<BackupLog, "id">): Promise<BackupLog> {
@@ -88,7 +92,7 @@ export class DatabaseStorage implements IStorage {
       failedBackups: logs.filter(l => l.status === 'failed').length,
       totalSize,
       lastBackupTime: logs.length > 0
-        ? new Date(Math.max(...logs.map(l => new Date(l.startTime).getTime())))
+        ? new Date(logs[0].startTime) // Ahora el primer log es el más reciente
         : undefined
     };
   }
