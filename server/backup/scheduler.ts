@@ -7,8 +7,8 @@ import type { BackupConfig } from '@shared/schema';
 const jobs = new Map<number, schedule.Job>();
 
 export async function initializeScheduler() {
-  // Schedule daily report
-  schedule.scheduleJob('0 0 * * *', async () => {
+  // Schedule daily report at 11:59 PM
+  schedule.scheduleJob('59 23 * * *', async () => {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const logs = await storage.getBackupLogsByDate(yesterday);
@@ -29,10 +29,23 @@ export function scheduleBackup(config: BackupConfig) {
     jobs.get(config.id)?.cancel();
   }
 
-  const job = schedule.scheduleJob(config.schedule, async () => {
-    const log = await performBackup(config);
-    const savedLog = await storage.insertBackupLog(log);
-    await sendBackupNotification(savedLog, config);
+  // If no schedule is set, default to 12:00 PM daily
+  const schedule = config.schedule || '0 12 * * *';
+
+  const job = schedule.scheduleJob(schedule, async () => {
+    try {
+      const log = await performBackup(config);
+      const savedLog = await storage.insertBackupLog(log);
+      await sendBackupNotification(savedLog, config);
+
+      console.log(`Backup completed for ${config.name}`, {
+        status: log.status,
+        size: log.fileSize,
+        duration: log.endTime ? new Date(log.endTime).getTime() - new Date(log.startTime).getTime() : 0
+      });
+    } catch (error) {
+      console.error(`Failed to execute backup for ${config.name}:`, error);
+    }
   });
 
   jobs.set(config.id, job);

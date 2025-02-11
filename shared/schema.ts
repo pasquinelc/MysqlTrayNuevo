@@ -12,7 +12,7 @@ export const backupConfigs = mysqlTable("backup_configs", {
   databases: json("databases").$type<string[]>().notNull(),
   schedule: text("schedule").notNull(),
   enabled: boolean("enabled").default(true),
-  retention: int("retention").default(30),
+  retention: int("retention").default(1095), // 3 years
 });
 
 export const backupLogs = mysqlTable("backup_logs", {

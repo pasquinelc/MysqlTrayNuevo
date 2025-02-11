@@ -2,12 +2,12 @@ import nodemailer from 'nodemailer';
 import { BackupLog, BackupConfig } from '@shared/schema';
 
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: process.env.SMTP_SECURE === 'true',
+  host: process.env.MAIL_SMTP_HOST || 'smtp.gmail.com',
+  port: parseInt(process.env.MAIL_SMTP_PORT || '465'),
+  secure: true, // for port 465
   auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS
+    user: process.env.MAIL_SMTP_USER || 'facturacion@turbinux.com',
+    pass: process.env.MAIL_SMTP_PASSWORD
   }
 });
 
@@ -18,24 +18,24 @@ interface EmailOptions {
 }
 
 export async function sendBackupNotification(log: BackupLog, config: BackupConfig) {
-  const status = log.status === 'completed' ? 'successful' : 'failed';
-  const subject = `Backup ${status}: ${config.name}`;
+  const status = log.status === 'completed' ? 'exitoso' : 'fallido';
+  const subject = `Respaldo ${status}: ${config.name}`;
 
   const sizeInMB = log.fileSize ? (log.fileSize / (1024 * 1024)).toFixed(2) : 0;
-  
+
   const html = `
-    <h2>MySQL Backup ${status}</h2>
-    <p>Configuration: ${config.name}</p>
-    <p>Databases: ${log.database}</p>
-    <p>Start Time: ${log.startTime}</p>
-    <p>End Time: ${log.endTime}</p>
-    <p>Status: ${log.status}</p>
-    <p>File Size: ${sizeInMB} MB</p>
+    <h2>Respaldo MySQL ${status}</h2>
+    <p>Configuración: ${config.name}</p>
+    <p>Bases de datos: ${log.database}</p>
+    <p>Hora de inicio: ${log.startTime}</p>
+    <p>Hora de finalización: ${log.endTime}</p>
+    <p>Estado: ${log.status}</p>
+    <p>Tamaño del archivo: ${sizeInMB} MB</p>
     ${log.error ? `<p>Error: ${log.error}</p>` : ''}
   `;
 
   await sendEmail({
-    to: process.env.NOTIFICATION_EMAILS?.split(',') || [],
+    to: ['pcc2100@yahoo.com'],
     subject,
     html
   });
@@ -44,20 +44,20 @@ export async function sendBackupNotification(log: BackupLog, config: BackupConfi
 export async function sendDailyReport(logs: BackupLog[]) {
   const successful = logs.filter(l => l.status === 'completed').length;
   const failed = logs.filter(l => l.status === 'failed').length;
-  
+
   const html = `
-    <h2>Daily Backup Report</h2>
-    <p>Total Backups: ${logs.length}</p>
-    <p>Successful: ${successful}</p>
-    <p>Failed: ${failed}</p>
-    
-    <h3>Details:</h3>
+    <h2>Reporte Diario de Respaldos</h2>
+    <p>Total de respaldos: ${logs.length}</p>
+    <p>Exitosos: ${successful}</p>
+    <p>Fallidos: ${failed}</p>
+
+    <h3>Detalles:</h3>
     <table border="1" style="border-collapse: collapse;">
       <tr>
-        <th>Database</th>
-        <th>Status</th>
-        <th>Size (MB)</th>
-        <th>Duration</th>
+        <th>Base de datos</th>
+        <th>Estado</th>
+        <th>Tamaño (MB)</th>
+        <th>Duración</th>
       </tr>
       ${logs.map(log => `
         <tr>
@@ -72,8 +72,8 @@ export async function sendDailyReport(logs: BackupLog[]) {
   `;
 
   await sendEmail({
-    to: process.env.REPORT_EMAILS?.split(',') || [],
-    subject: 'Daily Backup Report',
+    to: ['pcc2100@yahoo.com'],
+    subject: 'Reporte Diario de Respaldos',
     html
   });
 }
@@ -81,9 +81,10 @@ export async function sendDailyReport(logs: BackupLog[]) {
 async function sendEmail(options: EmailOptions) {
   try {
     await transporter.sendMail({
-      from: process.env.SMTP_FROM,
+      from: process.env.EMAIL_DESDE || 'facturacion@turbinux.com',
       ...options
     });
+    console.log('Email sent successfully');
   } catch (error) {
     console.error('Failed to send email:', error);
   }
