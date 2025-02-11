@@ -4,6 +4,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { createGzip } from 'zlib';
 import { pipeline } from 'stream/promises';
+import { spawn } from 'child_process';
 import { BackupConfig, BackupLog } from '@shared/schema';
 
 const execAsync = promisify(exec);
@@ -21,23 +22,20 @@ export async function performBackup(config: BackupConfig): Promise<BackupLog> {
     const outputPath = path.join(backupDir, filename);
     const gzOutputPath = path.join(backupDir, gzFilename);
 
-    // Log the mysqldump command for debugging (without password)
-    const debugCommand = [
-      'mysqldump',
-      `--host=${config.host}`,
-      `--port=${config.port}`,
-      `--user=${config.username}`,
-      '--password=****',
-      '--single-transaction',
-      '--routines',
-      '--triggers',
-      '--databases',
-      ...config.databases
-    ].join(' ');
-    console.log('Executing backup command:', debugCommand);
+    // Test connection first
+    try {
+      await execAsync(
+        `mysql --host=${config.host} --port=${config.port} --user=${config.username} --password=${config.password} -e "SELECT 1"`,
+        { maxBuffer: 1024 * 1024 * 10 } // 10MB buffer for connection test
+      );
+      console.log('MySQL connection test successful');
+    } catch (connError: any) {
+      console.error('MySQL connection test failed:', connError.message);
+      throw new Error(`Failed to connect to MySQL: ${connError.message}`);
+    }
 
-    const command = [
-      'mysqldump',
+    // Use spawn instead of exec for better stream handling
+    const mysqldump = spawn('mysqldump', [
       `--host=${config.host}`,
       `--port=${config.port}`,
       `--user=${config.username}`,
@@ -47,33 +45,31 @@ export async function performBackup(config: BackupConfig): Promise<BackupLog> {
       '--triggers',
       '--databases',
       ...config.databases
-    ].join(' ');
+    ]);
 
-    // Test connection first
-    try {
-      await execAsync(`mysql --host=${config.host} --port=${config.port} --user=${config.username} --password=${config.password} -e "SELECT 1"`);
-      console.log('MySQL connection test successful');
-    } catch (connError: any) {
-      console.error('MySQL connection test failed:', connError.message);
-      throw new Error(`Failed to connect to MySQL: ${connError.message}`);
-    }
+    // Create write stream with gzip compression
+    const gzipStream = createGzip();
+    const writeStream = await fs.open(gzOutputPath, 'w').then(fd => fd.createWriteStream());
 
-    const { stdout, stderr } = await execAsync(command);
+    // Collect any error messages
+    let errorOutput = '';
+    mysqldump.stderr.on('data', (data) => {
+      errorOutput += data.toString();
+      console.warn('mysqldump warning:', data.toString());
+    });
 
-    if (stderr) {
-      console.warn('mysqldump warnings:', stderr);
-    }
-
-    await fs.writeFile(outputPath, stdout);
-
-    // Compress the backup
-    const readStream = await fs.open(outputPath, 'r');
-    const writeStream = await fs.open(gzOutputPath, 'w');
-    const gzip = createGzip();
-    await pipeline(readStream.createReadStream(), gzip, writeStream.createWriteStream());
-
-    // Cleanup original file
-    await fs.unlink(outputPath);
+    // Handle the streaming process
+    await Promise.race([
+      pipeline(mysqldump.stdout, gzipStream, writeStream),
+      new Promise((_, reject) => {
+        mysqldump.on('error', reject);
+        mysqldump.on('exit', (code) => {
+          if (code !== 0) {
+            reject(new Error(`mysqldump exited with code ${code}`));
+          }
+        });
+      })
+    ]);
 
     const stats = await fs.stat(gzOutputPath);
 
@@ -87,7 +83,7 @@ export async function performBackup(config: BackupConfig): Promise<BackupLog> {
       fileSize: stats.size,
       filePath: gzOutputPath,
       error: null,
-      metadata: { stderr }
+      metadata: { stderr: errorOutput }
     };
   } catch (error: any) {
     console.error('Backup failed:', error);
@@ -103,7 +99,7 @@ export async function performBackup(config: BackupConfig): Promise<BackupLog> {
       error: error.message,
       metadata: { 
         error: error.stack,
-        command: error.cmd // Include the command that failed
+        command: error.cmd
       }
     };
   }
@@ -112,7 +108,7 @@ export async function performBackup(config: BackupConfig): Promise<BackupLog> {
 export async function verifyBackup(filePath: string): Promise<boolean> {
   try {
     const command = `gzip -d -c "${filePath}" | mysql --verbose --help > /dev/null`;
-    await execAsync(command);
+    await execAsync(command, { maxBuffer: 1024 * 1024 * 10 }); // 10MB buffer for verification
     return true;
   } catch (error) {
     console.error('Backup verification failed:', error);
