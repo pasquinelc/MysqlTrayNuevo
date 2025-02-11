@@ -3,18 +3,31 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Pause, Play, RotateCcw } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
-interface LogEntry {
+interface SystemLog {
+  id: number;
   timestamp: string;
-  level: "info" | "error" | "warn";
+  type: string;
+  level: "info" | "warning" | "error";
   message: string;
+  metadata: string | null;
 }
 
 export function LogViewer() {
-  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [logs, setLogs] = useState<SystemLog[]>([]);
   const [isPaused, setIsPaused] = useState(false);
   const ws = useRef<WebSocket | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Initial fetch of logs
+  const { data: initialLogs = [] } = useQuery<SystemLog[]>({
+    queryKey: ['/api/system-logs']
+  });
+
+  useEffect(() => {
+    setLogs(initialLogs);
+  }, [initialLogs]);
 
   useEffect(() => {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -27,7 +40,7 @@ export function LogViewer() {
         if (isPaused) return;
 
         const data = JSON.parse(event.data);
-        if (data.type === 'LOG') {
+        if (data.type === 'SYSTEM_LOG') {
           setLogs(prev => [...prev, data.log].slice(-1000)); // Keep last 1000 logs
         }
       };
@@ -54,6 +67,17 @@ export function LogViewer() {
   function clearLogs() {
     setLogs([]);
   }
+
+  const getLogColor = (level: string) => {
+    switch (level) {
+      case 'error':
+        return 'destructive';
+      case 'warning':
+        return 'default';
+      default:
+        return 'secondary';
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -89,23 +113,24 @@ export function LogViewer() {
         </div>
       </div>
 
-      <ScrollArea ref={scrollRef} className="h-[400px] border rounded-md bg-muted/50 p-4">
+      <ScrollArea className="h-[400px] border rounded-md bg-muted/50 p-4">
         <div className="space-y-2 font-mono text-sm">
-          {logs.map((log, i) => (
-            <div key={i} className="flex items-start gap-2">
+          {logs.map((log) => (
+            <div key={log.id} className="flex items-start gap-2">
               <span className="text-muted-foreground">
                 {new Date(log.timestamp).toLocaleTimeString()}
               </span>
-              <Badge
-                variant={
-                  log.level === 'error' ? 'destructive' :
-                  log.level === 'warn' ? 'default' :
-                  'secondary'
-                }
-              >
+              <Badge variant={getLogColor(log.level)}>
                 {log.level}
               </Badge>
+              <span className="text-muted-foreground">[{log.type}]</span>
               <span className="flex-1 whitespace-pre-wrap">{log.message}</span>
+              {log.metadata && (
+                <details className="text-xs text-muted-foreground">
+                  <summary>Details</summary>
+                  <pre>{JSON.stringify(JSON.parse(log.metadata), null, 2)}</pre>
+                </details>
+              )}
             </div>
           ))}
         </div>

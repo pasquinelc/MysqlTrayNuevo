@@ -4,6 +4,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { storage } from "./storage";
 import { initializeScheduler, scheduleBackup, cancelBackup } from './backup/scheduler';
 import { performBackup } from './backup/mysql';
+import { registerClient } from './websocket';
 
 export function registerRoutes(app: Express): Server {
   const httpServer = createServer(app);
@@ -12,20 +13,8 @@ export function registerRoutes(app: Express): Server {
   // WebSocket handler for real-time updates
   wss.on('connection', (ws) => {
     console.log('Client connected');
-
-    ws.on('close', () => {
-      console.log('Client disconnected');
-    });
+    registerClient(ws);
   });
-
-  // Broadcast updates to all connected clients
-  function broadcast(data: any) {
-    wss.clients.forEach((client) => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(JSON.stringify(data));
-      }
-    });
-  }
 
   // Initialize backup scheduler
   initializeScheduler().catch(console.error);
@@ -41,7 +30,6 @@ export function registerRoutes(app: Express): Server {
     if (config.enabled) {
       scheduleBackup(config);
     }
-    broadcast({ type: 'CONFIG_ADDED', config });
     res.json(config);
   });
 
@@ -52,7 +40,6 @@ export function registerRoutes(app: Express): Server {
     } else {
       cancelBackup(config.id);
     }
-    broadcast({ type: 'CONFIG_UPDATED', config });
     res.json(config);
   });
 
@@ -72,11 +59,6 @@ export function registerRoutes(app: Express): Server {
       const log = await performBackup(config);
       const savedLog = await storage.insertBackupLog(log);
 
-      broadcast({ 
-        type: 'BACKUP_COMPLETED', 
-        log: savedLog
-      });
-
       res.json(savedLog);
     } catch (error: any) {
       console.error('Backup execution failed:', error);
@@ -93,10 +75,6 @@ export function registerRoutes(app: Express): Server {
       };
 
       const savedLog = await storage.insertBackupLog(errorLog);
-      broadcast({ 
-        type: 'BACKUP_FAILED', 
-        log: savedLog
-      });
 
       res.status(500).json({ 
         status: 'failed',

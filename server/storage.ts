@@ -2,6 +2,7 @@ import { db } from "./db";
 import { eq, sql } from "drizzle-orm";
 import { backupConfigs, backupLogs, settings, systemLogs, type SystemLog } from "@shared/schema";
 import type { BackupConfig, BackupLog, Setting } from "@shared/schema";
+import { broadcast } from "./websocket";
 
 export interface IStorage {
   getAllBackupConfigs(): Promise<BackupConfig[]>;
@@ -117,16 +118,21 @@ export class DatabaseStorage implements IStorage {
     return await db.select()
       .from(systemLogs)
       .orderBy(sql`${systemLogs.timestamp} DESC`)
-      .limit(100);
+      .limit(1000);
   }
 
   async insertSystemLog(log: Omit<SystemLog, "id" | "timestamp">): Promise<SystemLog> {
     const [result] = await db.insert(systemLogs).values(log);
-    return {
+    const savedLog = {
       ...log,
       id: result.insertId,
       timestamp: new Date()
     } as SystemLog;
+
+    // Broadcast the new log to connected clients
+    broadcast({ type: 'SYSTEM_LOG', log: savedLog });
+
+    return savedLog;
   }
 }
 

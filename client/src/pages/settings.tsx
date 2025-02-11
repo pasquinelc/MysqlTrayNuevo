@@ -20,7 +20,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { insertSettingSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
-import { DiskSpace } from "@/components/disk-space";
 import { LogViewer } from "@/components/log-viewer";
 
 export default function SettingsPage() {
@@ -49,13 +48,20 @@ export default function SettingsPage() {
         title: "Settings updated",
         description: "Your settings have been saved successfully."
       });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error updating settings",
+        description: error.message || "There was an error updating the settings.",
+        variant: "destructive"
+      });
     }
   });
 
-  const settingsMap = settings?.reduce((acc, setting) => {
+  const settingsMap = settings?.reduce((acc: Record<string, string>, setting: any) => {
     acc[setting.key] = setting.value;
     return acc;
-  }, {} as Record<string, string>) || {};
+  }, {}) || {};
 
   return (
     <div className="container mx-auto py-8">
@@ -63,7 +69,7 @@ export default function SettingsPage() {
         <section>
           <Card>
             <CardHeader>
-              <CardTitle>Email Notifications</CardTitle>
+              <CardTitle>Email Settings</CardTitle>
               <CardDescription>
                 Configure email settings for backup notifications
               </CardDescription>
@@ -196,20 +202,8 @@ export default function SettingsPage() {
         <section>
           <Card>
             <CardHeader>
-              <CardTitle>Storage</CardTitle>
-              <CardDescription>Monitor backup storage usage</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <DiskSpace />
-            </CardContent>
-          </Card>
-        </section>
-
-        <section>
-          <Card>
-            <CardHeader>
               <CardTitle>System Logs</CardTitle>
-              <CardDescription>View real-time system logs</CardDescription>
+              <CardDescription>Monitor system activity and email notifications</CardDescription>
             </CardHeader>
             <CardContent>
               <LogViewer />
