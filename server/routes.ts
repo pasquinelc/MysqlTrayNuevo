@@ -62,15 +62,48 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.post('/api/backup/:id/run', async (req, res) => {
-    const config = await storage.getBackupConfig(parseInt(req.params.id));
-    if (!config) {
-      return res.status(404).json({ error: 'Config not found' });
-    }
+    try {
+      const config = await storage.getBackupConfig(parseInt(req.params.id));
+      if (!config) {
+        return res.status(404).json({ error: 'Config not found' });
+      }
 
-    const log = await performBackup(config);
-    await storage.insertBackupLog(log);
-    broadcast({ type: 'BACKUP_COMPLETED', log });
-    res.json(log);
+      console.log(`Starting backup for config: ${config.name}`);
+      const log = await performBackup(config);
+      const savedLog = await storage.insertBackupLog(log);
+
+      broadcast({ 
+        type: 'BACKUP_COMPLETED', 
+        log: savedLog
+      });
+
+      res.json(savedLog);
+    } catch (error: any) {
+      console.error('Backup execution failed:', error);
+      const errorLog = {
+        configId: parseInt(req.params.id),
+        database: '',
+        startTime: new Date(),
+        endTime: new Date(),
+        status: 'failed',
+        error: error.message,
+        fileSize: 0,
+        filePath: null,
+        metadata: { error: error.stack }
+      };
+
+      const savedLog = await storage.insertBackupLog(errorLog);
+      broadcast({ 
+        type: 'BACKUP_FAILED', 
+        log: savedLog
+      });
+
+      res.status(500).json({ 
+        status: 'failed',
+        error: error.message,
+        log: savedLog
+      });
+    }
   });
 
   app.get('/api/stats', async (req, res) => {
