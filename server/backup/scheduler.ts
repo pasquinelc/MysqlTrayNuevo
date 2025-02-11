@@ -30,9 +30,9 @@ export function scheduleBackup(config: BackupConfig) {
   }
 
   // If no schedule is set, default to 12:00 PM daily
-  const schedule = config.schedule || '0 12 * * *';
+  const cronSchedule = config.schedule || '0 12 * * *';
 
-  const job = schedule.scheduleJob(schedule, async () => {
+  const job = schedule.scheduleJob(cronSchedule, async () => {
     try {
       const log = await performBackup(config);
       const savedLog = await storage.insertBackupLog(log);
