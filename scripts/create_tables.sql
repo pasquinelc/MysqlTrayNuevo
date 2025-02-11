@@ -32,3 +32,13 @@ CREATE TABLE IF NOT EXISTS settings (
     `key` TEXT NOT NULL,
     value TEXT NOT NULL
 );
+
+-- Crear tabla de logs del sistema
+CREATE TABLE IF NOT EXISTS system_logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    type TEXT NOT NULL,
+    level TEXT NOT NULL,
+    message TEXT NOT NULL,
+    metadata JSON
+);
