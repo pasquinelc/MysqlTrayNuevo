@@ -21,6 +21,21 @@ export async function performBackup(config: BackupConfig): Promise<BackupLog> {
     const outputPath = path.join(backupDir, filename);
     const gzOutputPath = path.join(backupDir, gzFilename);
 
+    // Log the mysqldump command for debugging (without password)
+    const debugCommand = [
+      'mysqldump',
+      `--host=${config.host}`,
+      `--port=${config.port}`,
+      `--user=${config.username}`,
+      '--password=****',
+      '--single-transaction',
+      '--routines',
+      '--triggers',
+      '--databases',
+      ...config.databases
+    ].join(' ');
+    console.log('Executing backup command:', debugCommand);
+
     const command = [
       'mysqldump',
       `--host=${config.host}`,
@@ -34,7 +49,21 @@ export async function performBackup(config: BackupConfig): Promise<BackupLog> {
       ...config.databases
     ].join(' ');
 
+    // Test connection first
+    try {
+      await execAsync(`mysql --host=${config.host} --port=${config.port} --user=${config.username} --password=${config.password} -e "SELECT 1"`);
+      console.log('MySQL connection test successful');
+    } catch (connError: any) {
+      console.error('MySQL connection test failed:', connError.message);
+      throw new Error(`Failed to connect to MySQL: ${connError.message}`);
+    }
+
     const { stdout, stderr } = await execAsync(command);
+
+    if (stderr) {
+      console.warn('mysqldump warnings:', stderr);
+    }
+
     await fs.writeFile(outputPath, stdout);
 
     // Compress the backup
@@ -60,7 +89,8 @@ export async function performBackup(config: BackupConfig): Promise<BackupLog> {
       error: null,
       metadata: { stderr }
     };
-  } catch (error: any) { // Type assertion to fix TypeScript error
+  } catch (error: any) {
+    console.error('Backup failed:', error);
     return {
       id: 0,
       configId: config.id,
@@ -71,7 +101,10 @@ export async function performBackup(config: BackupConfig): Promise<BackupLog> {
       fileSize: 0,
       filePath: null,
       error: error.message,
-      metadata: { error: error.stack }
+      metadata: { 
+        error: error.stack,
+        command: error.cmd // Include the command that failed
+      }
     };
   }
 }

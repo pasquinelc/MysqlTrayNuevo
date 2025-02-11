@@ -61,21 +61,41 @@ export default function BackupsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/configs'] });
       toast({
-        title: "Backup configuration created",
-        description: "Your backup configuration has been saved."
+        title: "Configuración de respaldo creada",
+        description: "La configuración de respaldo ha sido guardada exitosamente."
       });
       form.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error al crear configuración",
+        description: error.message || "Hubo un error al crear la configuración de respaldo.",
+        variant: "destructive"
+      });
     }
   });
 
   const runBackupMutation = useMutation({
     mutationFn: async (configId: number) => {
-      await apiRequest('POST', `/api/backup/${configId}/run`);
+      const response = await apiRequest('POST', `/api/backup/${configId}/run`);
+      if (response.status === 'failed') {
+        throw new Error(response.error || 'Error al ejecutar el respaldo');
+      }
+      return response;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/logs'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
       toast({
-        title: "Backup started",
-        description: "The backup process has been initiated."
+        title: "Respaldo completado",
+        description: "El proceso de respaldo se ha completado exitosamente."
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error en el respaldo",
+        description: error.message || "Hubo un error al ejecutar el respaldo. Verifica las credenciales y la conexión a la base de datos.",
+        variant: "destructive"
       });
     }
   });
@@ -84,7 +104,7 @@ export default function BackupsPage() {
     <div className="container mx-auto py-8">
       <div className="grid gap-8">
         <section>
-          <h2 className="text-3xl font-bold mb-4">Backup Configurations</h2>
+          <h2 className="text-3xl font-bold mb-4">Configuraciones de Respaldo</h2>
           <div className="grid md:grid-cols-2 gap-4">
             {configs.map((config) => (
               <Card key={config.id}>
@@ -103,17 +123,17 @@ export default function BackupsPage() {
                       <span className="font-medium">Host:</span> {config.host}:{config.port}
                     </div>
                     <div>
-                      <span className="font-medium">Schedule:</span> {config.schedule}
+                      <span className="font-medium">Programación:</span> {config.schedule}
                     </div>
                     <div>
-                      <span className="font-medium">Retention:</span> {config.retention} days
+                      <span className="font-medium">Retención:</span> {config.retention} días
                     </div>
                   </div>
                   <Button 
                     onClick={() => runBackupMutation.mutate(config.id)}
                     disabled={runBackupMutation.isPending}
                   >
-                    Run Now
+                    {runBackupMutation.isPending ? "Ejecutando..." : "Ejecutar ahora"}
                   </Button>
                 </CardContent>
               </Card>
