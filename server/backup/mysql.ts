@@ -7,6 +7,7 @@ import { pipeline } from 'stream/promises';
 import { spawn } from 'child_process';
 import { BackupConfig, BackupLog } from '@shared/schema';
 import { storage } from '../storage';
+import { sendBackupNotification } from './email';
 
 const execAsync = promisify(exec);
 
@@ -26,6 +27,7 @@ async function logToSystem(level: 'info' | 'warning' | 'error', message: string,
 export async function performBackup(config: BackupConfig): Promise<BackupLog> {
   const startTime = new Date();
   const backupDir = process.env.BACKUP_DIR || './backups';
+  let backupLog: BackupLog;
 
   await logToSystem('info', `Iniciando respaldo para ${config.name}`, {
     config: {
@@ -55,7 +57,7 @@ export async function performBackup(config: BackupConfig): Promise<BackupLog> {
         error: connError.message,
         stack: connError.stack
       });
-      return {
+      backupLog = {
         id: 0,
         configId: config.id,
         database: config.databases.join(','),
@@ -67,6 +69,15 @@ export async function performBackup(config: BackupConfig): Promise<BackupLog> {
         error: `Failed to connect to MySQL: ${connError.message}`,
         metadata: { error: connError.stack }
       };
+      try {
+        await sendBackupNotification(backupLog, config);
+      } catch (emailError: any) {
+        await logToSystem('error', 'Error al enviar notificación de fallo de conexión', {
+          error: emailError.message,
+          stack: emailError.stack
+        });
+      }
+      return backupLog;
     }
 
     // Use spawn for streaming backup
@@ -123,7 +134,7 @@ export async function performBackup(config: BackupConfig): Promise<BackupLog> {
         path: gzOutputPath
       });
 
-      return {
+      backupLog = {
         id: 0,
         configId: config.id,
         database: config.databases.join(','),
@@ -135,6 +146,18 @@ export async function performBackup(config: BackupConfig): Promise<BackupLog> {
         error: null,
         metadata: { warnings: errorOutput }
       };
+
+      try {
+        await sendBackupNotification(backupLog, config);
+      } catch (emailError: any) {
+        await logToSystem('error', 'Error al enviar notificación de respaldo exitoso', {
+          error: emailError.message,
+          stack: emailError.stack
+        });
+      }
+
+      return backupLog;
+
     } catch (streamError: any) {
       // Clean up the incomplete backup file
       try {
@@ -157,7 +180,7 @@ export async function performBackup(config: BackupConfig): Promise<BackupLog> {
       stack: error.stack
     });
 
-    return {
+    backupLog = {
       id: 0,
       configId: config.id,
       database: config.databases.join(','),
@@ -172,6 +195,17 @@ export async function performBackup(config: BackupConfig): Promise<BackupLog> {
         command: error.cmd
       }
     };
+
+    try {
+      await sendBackupNotification(backupLog, config);
+    } catch (emailError: any) {
+      await logToSystem('error', 'Error al enviar notificación de fallo de respaldo', {
+        error: emailError.message,
+        stack: emailError.stack
+      });
+    }
+
+    return backupLog;
   }
 }
 
