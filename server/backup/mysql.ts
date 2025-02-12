@@ -29,7 +29,17 @@ async function logToSystem(level: 'info' | 'warning' | 'error', message: string,
 
 export async function performBackup(config: BackupConfig): Promise<BackupLog[]> {
   const startTime = new Date();
-  const baseDir = process.env.BACKUP_DIR || './backups';
+  // Obtener la ruta base de la configuración o usar el valor por defecto
+  let baseDir = './backups';
+  try {
+    const backupPathSetting = await storage.getSetting('backup_path');
+    if (backupPathSetting) {
+      baseDir = backupPathSetting.value;
+    }
+  } catch (error) {
+    await logToSystem('warning', 'No se encontró configuración de ruta de respaldo, usando valor por defecto', { defaultPath: baseDir });
+  }
+
   const dateFolderName = format(startTime, 'dd-MM-yy');
   const backupDir = path.join(baseDir, dateFolderName);
   const logs: BackupLog[] = [];

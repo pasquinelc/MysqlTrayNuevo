@@ -70,14 +70,41 @@ export default function SettingsPage() {
         <section>
           <Card>
             <CardHeader>
-              <CardTitle>Configuración de Notificaciones</CardTitle>
+              <CardTitle>Configuración de Respaldos</CardTitle>
               <CardDescription>
-                Configura los correos electrónicos para recibir notificaciones de respaldos
+                Configura las opciones generales del sistema de respaldos
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Form {...form}>
                 <form className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="value"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Ruta de Respaldos</FormLabel>
+                        <FormControl>
+                          <Input 
+                            {...field} 
+                            value={settingsMap['backup_path'] || './backups'}
+                            onChange={(e) => {
+                              field.onChange(e);
+                              updateMutation.mutate({
+                                key: 'backup_path',
+                                value: e.target.value
+                              });
+                            }}
+                            placeholder="Ejemplo: Z:\RespaldosAutomaticos"
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Ruta donde se guardarán los archivos de respaldo
+                        </FormDescription>
+                      </FormItem>
+                    )}
+                  />
+
                   <FormField
                     control={form.control}
                     name="value"
