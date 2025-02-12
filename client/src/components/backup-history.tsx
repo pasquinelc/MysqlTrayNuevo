@@ -36,9 +36,16 @@ export function BackupHistory() {
     queryFn: async () => {
       if (!date?.from || !date?.to) return fetch('/api/logs').then(r => r.json());
 
+      // Set the time to start of day for from date and end of day for to date
+      const fromDate = new Date(date.from);
+      fromDate.setHours(0, 0, 0, 0);
+
+      const toDate = new Date(date.to);
+      toDate.setHours(23, 59, 59, 999);
+
       const params = new URLSearchParams({
-        startDate: date.from.toISOString(),
-        endDate: date.to.toISOString()
+        startDate: fromDate.toISOString(),
+        endDate: toDate.toISOString()
       });
 
       return fetch(`/api/logs?${params}`).then(r => r.json());

@@ -79,13 +79,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getBackupLogsByDateRange(startDate: Date, endDate: Date): Promise<BackupLog[]> {
+    // Ensure we're using the correct timezone when querying
     return await db
       .select()
       .from(backupLogs)
       .where(
         and(
-          sql`${backupLogs.startTime} >= ${startDate}`,
-          sql`${backupLogs.startTime} <= ${endDate}`
+          sql`DATE(${backupLogs.startTime}) >= DATE(${startDate})`,
+          sql`DATE(${backupLogs.startTime}) <= DATE(${endDate})`
         )
       )
       .orderBy(sql`${backupLogs.startTime} DESC`);
@@ -107,7 +108,7 @@ export class DatabaseStorage implements IStorage {
       failedBackups: logs.filter(l => l.status === 'failed').length,
       totalSize,
       lastBackupTime: logs.length > 0
-        ? new Date(logs[0].startTime) 
+        ? new Date(logs[0].startTime)
         : undefined
     };
   }
