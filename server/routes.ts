@@ -5,6 +5,7 @@ import { storage } from "./storage";
 import { initializeScheduler, scheduleBackup, cancelBackup } from './backup/scheduler';
 import { performBackup } from './backup/mysql';
 import { registerClient } from './websocket';
+import { format, parseISO, subDays } from 'date-fns';
 
 export function registerRoutes(app: Express): Server {
   const httpServer = createServer(app);
@@ -84,8 +85,25 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.get('/api/logs', async (req, res) => {
-    const logs = await storage.getBackupLogs();
-    res.json(logs);
+    try {
+      const { startDate, endDate } = req.query;
+      let logs;
+
+      if (startDate && endDate) {
+        // Si se proporcionan fechas, filtrar por rango
+        logs = await storage.getBackupLogsByDateRange(
+          new Date(startDate as string),
+          new Date(endDate as string)
+        );
+      } else {
+        // Si no hay fechas, retornar los últimos 10 logs
+        logs = await storage.getBackupLogs();
+      }
+      res.json(logs);
+    } catch (error: any) {
+      console.error('Error fetching logs:', error);
+      res.status(500).json({ error: error.message });
+    }
   });
 
   app.post('/api/backup/:id/run', async (req, res) => {

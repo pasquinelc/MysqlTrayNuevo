@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and, between } from "drizzle-orm";
 import { backupConfigs, backupLogs, settings, systemLogs, type SystemLog } from "@shared/schema";
 import type { BackupConfig, BackupLog, Setting } from "@shared/schema";
 import { broadcast } from "./websocket";
@@ -12,6 +12,7 @@ export interface IStorage {
 
   getBackupLogs(): Promise<BackupLog[]>;
   getBackupLogsByDate(date: Date): Promise<BackupLog[]>;
+  getBackupLogsByDateRange(startDate: Date, endDate: Date): Promise<BackupLog[]>; // Added method
   insertBackupLog(log: Omit<BackupLog, "id">): Promise<BackupLog>;
 
   getBackupStats(): Promise<{
@@ -61,7 +62,7 @@ export class DatabaseStorage implements IStorage {
     return await db.select()
       .from(backupLogs)
       .orderBy(sql`${backupLogs.startTime} DESC`)
-      .limit(100); // Limitamos a los últimos 100 registros por ahora
+      .limit(10); // Limitamos a los últimos 10 registros para la vista rápida
   }
 
   async getBackupLogsByDate(date: Date): Promise<BackupLog[]> {
@@ -74,6 +75,19 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(backupLogs)
       .where(sql`${backupLogs.startTime} >= ${startOfDay} AND ${backupLogs.startTime} <= ${endOfDay}`)
+      .orderBy(sql`${backupLogs.startTime} DESC`);
+  }
+
+  async getBackupLogsByDateRange(startDate: Date, endDate: Date): Promise<BackupLog[]> {
+    return await db
+      .select()
+      .from(backupLogs)
+      .where(
+        and(
+          sql`${backupLogs.startTime} >= ${startDate}`,
+          sql`${backupLogs.startTime} <= ${endDate}`
+        )
+      )
       .orderBy(sql`${backupLogs.startTime} DESC`);
   }
 
@@ -93,7 +107,7 @@ export class DatabaseStorage implements IStorage {
       failedBackups: logs.filter(l => l.status === 'failed').length,
       totalSize,
       lastBackupTime: logs.length > 0
-        ? new Date(logs[0].startTime) // Ahora el primer log es el más reciente
+        ? new Date(logs[0].startTime) 
         : undefined
     };
   }
