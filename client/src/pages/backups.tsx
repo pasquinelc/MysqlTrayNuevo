@@ -40,7 +40,7 @@ import {
 const configSchema = insertBackupConfigSchema.extend({
   databases: z.string().transform(s => s.split(',').map(d => d.trim()).filter(Boolean)),
   port: z.coerce.number().min(1).max(65535),
-  retention: z.coerce.number().min(1).max(365)
+  retention: z.coerce.number().min(1).max(3650)
 });
 
 export default function BackupsPage() {
@@ -68,7 +68,12 @@ export default function BackupsPage() {
 
   const createMutation = useMutation({
     mutationFn: async (values: z.infer<typeof configSchema>) => {
-      await apiRequest('POST', '/api/configs', values);
+      // Transform values to match backend expectations
+      const formData = {
+        ...values,
+        databases: values.databases instanceof Array ? values.databases : values.databases.split(',').map(d => d.trim()).filter(Boolean)
+      };
+      await apiRequest('POST', '/api/configs', formData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/configs'] });
@@ -90,7 +95,7 @@ export default function BackupsPage() {
   const runBackupMutation = useMutation({
     mutationFn: async (configId: number) => {
       const response = await apiRequest('POST', `/api/backup/${configId}/run`);
-      if (response.status === 'failed') {
+      if (response && response.status === 'failed') {
         throw new Error(response.error || 'Error al ejecutar el respaldo');
       }
       return response;
@@ -215,12 +220,7 @@ export default function BackupsPage() {
             <CardContent>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit((data) => {
-                  const formData = {
-                    ...data,
-                    port: Number(data.port),
-                    retention: Number(data.retention)
-                  };
-                  createMutation.mutate(formData);
+                  createMutation.mutate(data);
                 })} className="space-y-4">
                   <FormField
                     control={form.control}
