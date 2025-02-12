@@ -40,7 +40,6 @@ import {
 const configSchema = insertBackupConfigSchema.extend({
   databases: z.string().transform(s => s.split(',').map(d => d.trim()).filter(Boolean)),
   port: z.coerce.number().min(1).max(65535),
-  retention: z.coerce.number().min(1).max(3650)
 });
 
 export default function BackupsPage() {
@@ -62,7 +61,6 @@ export default function BackupsPage() {
       databases: "",
       schedule: "0 12 * * *", // Default to noon daily
       enabled: true,
-      retention: 1095 // Default to 3 years
     }
   });
 
@@ -193,9 +191,6 @@ export default function BackupsPage() {
                     <div>
                       <span className="font-medium">Programación:</span> {config.schedule}
                     </div>
-                    <div>
-                      <span className="font-medium">Retención:</span> {config.retention} días
-                    </div>
                   </div>
                   <Button 
                     onClick={() => runBackupMutation.mutate(config.id)}
@@ -319,19 +314,6 @@ export default function BackupsPage() {
                         <FormDescription>
                           e.g. "0 0 * * *" for daily at midnight
                         </FormDescription>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="retention"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Retention Period (Days)</FormLabel>
-                        <FormControl>
-                          <Input type="number" {...field} />
-                        </FormControl>
                       </FormItem>
                     )}
                   />

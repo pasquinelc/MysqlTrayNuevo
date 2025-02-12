@@ -12,7 +12,7 @@ export const backupConfigs = mysqlTable("backup_configs", {
   databases: json("databases").$type<string[]>().notNull(),
   schedule: text("schedule").notNull(),
   enabled: boolean("enabled").default(true),
-  retention: int("retention").default(1095), // 3 years
+  retention: int("retention").default(99999), // High default value
 });
 
 export const backupLogs = mysqlTable("backup_logs", {
@@ -46,7 +46,6 @@ export const systemLogs = mysqlTable("system_logs", {
 // Actualizar el esquema de inserción con validaciones más flexibles
 export const insertBackupConfigSchema = createInsertSchema(backupConfigs, {
   port: z.number().min(1).max(65535),
-  retention: z.number().min(1).max(3650), // Aumentado a 10 años
   databases: z.string().array().nonempty(),
   schedule: z.string().regex(/^[0-9*\-,/\s]+$/, "Debe ser una expresión cron válida")
 }).omit({ 
