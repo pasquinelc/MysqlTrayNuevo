@@ -1,3 +1,5 @@
+process.env.TZ = 'America/Mexico_City';
+
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs/promises';
@@ -161,7 +163,7 @@ export async function performBackup(config: BackupConfig): Promise<BackupLog[]> 
           fileSize: 0,
           filePath: null,
           error: streamError.message,
-          metadata: { 
+          metadata: {
             error: streamError.stack,
             command: streamError.cmd
           }
@@ -191,7 +193,7 @@ export async function performBackup(config: BackupConfig): Promise<BackupLog[]> 
         fileSize: 0,
         filePath: null,
         error: error.message,
-        metadata: { 
+        metadata: {
           error: error.stack,
           command: error.cmd
         }

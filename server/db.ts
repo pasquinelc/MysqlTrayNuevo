@@ -2,12 +2,16 @@ import { drizzle } from 'drizzle-orm/mysql2';
 import mysql from 'mysql2/promise';
 import * as schema from "@shared/schema";
 
+// Configurar zona horaria
+process.env.TZ = 'America/Mexico_City';
+
 const poolConnection = mysql.createPool({
   host: process.env.MYSQL_HOST || 'localhost',
   port: parseInt(process.env.MYSQL_PORT || '3306'),
   user: process.env.MYSQL_USER || 'root',
   password: process.env.MYSQL_PASSWORD || '',
   database: 'backups',
+  timezone: 'America/Mexico_City',
   waitForConnections: true,
   connectionLimit: 10,
   maxIdle: 10,

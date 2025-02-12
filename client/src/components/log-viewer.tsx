@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Pause, Play, RotateCcw } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
 interface SystemLog {
   id: number;
@@ -118,7 +120,7 @@ export function LogViewer() {
           {logs.map((log) => (
             <div key={log.id} className="flex items-start gap-2">
               <span className="text-muted-foreground">
-                {new Date(log.timestamp).toLocaleTimeString()}
+                {format(new Date(log.timestamp), 'HH:mm:ss', { locale: es })}
               </span>
               <Badge variant={getLogColor(log.level)}>
                 {log.level}
@@ -127,7 +129,7 @@ export function LogViewer() {
               <span className="flex-1 whitespace-pre-wrap">{log.message}</span>
               {log.metadata && (
                 <details className="text-xs text-muted-foreground">
-                  <summary>Details</summary>
+                  <summary>Detalles</summary>
                   <pre>{JSON.stringify(JSON.parse(log.metadata), null, 2)}</pre>
                 </details>
               )}
