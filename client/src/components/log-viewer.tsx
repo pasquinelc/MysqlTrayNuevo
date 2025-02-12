@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Pause, Play, RotateCcw } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 
 interface SystemLog {
@@ -81,6 +81,18 @@ export function LogViewer() {
     }
   };
 
+  const formatTimestamp = (timestamp: string) => {
+    try {
+      // Asumimos que la fecha viene en ISO format y la parseamos
+      const date = parseISO(timestamp);
+      // Formateamos la fecha usando la localización en español
+      return format(date, 'dd/MM/yyyy HH:mm:ss', { locale: es });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return timestamp;
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -120,7 +132,7 @@ export function LogViewer() {
           {logs.map((log) => (
             <div key={log.id} className="flex items-start gap-2">
               <span className="text-muted-foreground">
-                {format(new Date(log.timestamp), 'HH:mm:ss', { locale: es })}
+                {formatTimestamp(log.timestamp)}
               </span>
               <Badge variant={getLogColor(log.level)}>
                 {log.level}
