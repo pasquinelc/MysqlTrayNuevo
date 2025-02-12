@@ -114,7 +114,8 @@ export function BackupHistory() {
             <TableHead>Estado</TableHead>
             <TableHead>Tamaño</TableHead>
             <TableHead>Duración</TableHead>
-            <TableHead>Iniciado</TableHead>
+            <TableHead>Fecha y Hora</TableHead>
+            <TableHead>Hace</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -136,6 +137,9 @@ export function BackupHistory() {
                 {log.endTime && log.startTime
                   ? `${Math.round((new Date(log.endTime).getTime() - new Date(log.startTime).getTime()) / 1000)}s`
                   : '-'}
+              </TableCell>
+              <TableCell>
+                {format(new Date(log.startTime), "dd/MM/yyyy HH:mm:ss", { locale: es })}
               </TableCell>
               <TableCell>
                 {formatDistanceToNow(new Date(log.startTime), { addSuffix: true, locale: es })}
