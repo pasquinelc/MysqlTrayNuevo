@@ -10,6 +10,7 @@ import { spawn } from 'child_process';
 import { BackupConfig, BackupLog } from '@shared/schema';
 import { storage } from '../storage';
 import { sendBackupNotification } from './email';
+import { format } from 'date-fns';
 
 const execAsync = promisify(exec);
 
@@ -28,19 +29,22 @@ async function logToSystem(level: 'info' | 'warning' | 'error', message: string,
 
 export async function performBackup(config: BackupConfig): Promise<BackupLog[]> {
   const startTime = new Date();
-  const backupDir = process.env.BACKUP_DIR || './backups';
+  const baseDir = process.env.BACKUP_DIR || './backups';
+  const dateFolderName = format(startTime, 'dd-MM-yy');
+  const backupDir = path.join(baseDir, dateFolderName);
   const logs: BackupLog[] = [];
 
   await logToSystem('info', `Iniciando respaldo para ${config.name}`, {
     config: {
       name: config.name,
       databases: config.databases,
-      host: config.host
+      host: config.host,
+      backupDir
     }
   });
 
   try {
-    // Ensure backup directory exists
+    // Ensure backup directory structure exists
     await fs.mkdir(backupDir, { recursive: true });
 
     // Test connection first
