@@ -12,6 +12,7 @@ import {
   FormField,
   FormItem,
   FormLabel,
+  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -45,14 +46,14 @@ export default function SettingsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/settings'] });
       toast({
-        title: "Settings updated",
-        description: "Your settings have been saved successfully."
+        title: "Configuración actualizada",
+        description: "Los cambios han sido guardados exitosamente."
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Error updating settings",
-        description: error.message || "There was an error updating the settings.",
+        title: "Error al actualizar la configuración",
+        description: error.message || "Hubo un error al guardar los cambios.",
         variant: "destructive"
       });
     }
@@ -69,9 +70,9 @@ export default function SettingsPage() {
         <section>
           <Card>
             <CardHeader>
-              <CardTitle>Email Settings</CardTitle>
+              <CardTitle>Configuración de Notificaciones</CardTitle>
               <CardDescription>
-                Configure email settings for backup notifications
+                Configura los correos electrónicos para recibir notificaciones de respaldos
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -82,7 +83,7 @@ export default function SettingsPage() {
                     name="value"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Notification Email Addresses</FormLabel>
+                        <FormLabel>Correos para Notificaciones</FormLabel>
                         <FormControl>
                           <Input 
                             {...field} 
@@ -94,102 +95,12 @@ export default function SettingsPage() {
                                 value: e.target.value
                               });
                             }}
+                            placeholder="correo1@ejemplo.com, correo2@ejemplo.com"
                           />
                         </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="value"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>SMTP Host</FormLabel>
-                        <FormControl>
-                          <Input 
-                            {...field}
-                            value={settingsMap['smtp_host'] || ''}
-                            onChange={(e) => {
-                              field.onChange(e);
-                              updateMutation.mutate({
-                                key: 'smtp_host',
-                                value: e.target.value
-                              });
-                            }}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="value"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>SMTP Port</FormLabel>
-                        <FormControl>
-                          <Input 
-                            {...field}
-                            type="number"
-                            value={settingsMap['smtp_port'] || '587'}
-                            onChange={(e) => {
-                              field.onChange(e);
-                              updateMutation.mutate({
-                                key: 'smtp_port',
-                                value: e.target.value
-                              });
-                            }}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="value"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>SMTP Username</FormLabel>
-                        <FormControl>
-                          <Input 
-                            {...field}
-                            value={settingsMap['smtp_username'] || ''}
-                            onChange={(e) => {
-                              field.onChange(e);
-                              updateMutation.mutate({
-                                key: 'smtp_username',
-                                value: e.target.value
-                              });
-                            }}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="value"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>SMTP Password</FormLabel>
-                        <FormControl>
-                          <Input 
-                            {...field}
-                            type="password"
-                            value={settingsMap['smtp_password'] || ''}
-                            onChange={(e) => {
-                              field.onChange(e);
-                              updateMutation.mutate({
-                                key: 'smtp_password',
-                                value: e.target.value
-                              });
-                            }}
-                          />
-                        </FormControl>
+                        <FormDescription>
+                          Ingresa las direcciones de correo separadas por comas
+                        </FormDescription>
                       </FormItem>
                     )}
                   />
@@ -202,8 +113,8 @@ export default function SettingsPage() {
         <section>
           <Card>
             <CardHeader>
-              <CardTitle>System Logs</CardTitle>
-              <CardDescription>Monitor system activity and email notifications</CardDescription>
+              <CardTitle>Registros del Sistema</CardTitle>
+              <CardDescription>Monitorea la actividad del sistema y las notificaciones por correo</CardDescription>
             </CardHeader>
             <CardContent>
               <LogViewer />
