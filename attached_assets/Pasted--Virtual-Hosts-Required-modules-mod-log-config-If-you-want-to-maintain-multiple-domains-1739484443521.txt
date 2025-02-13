@@ -1,0 +1,209 @@
+# Virtual Hosts
+#
+# Required modules: mod_log_config
+
+# If you want to maintain multiple domains/hostnames on your
+# machine you can setup VirtualHost containers for them. Most configurations
+# use only name-based virtual hosts so the server doesn't need to worry about
+# IP addresses. This is indicated by the asterisks in the directives below.
+#
+# Please see the documentation at 
+# <URL:http://httpd.apache.org/docs/2.4/vhosts/>
+# for further details before you try to setup virtual hosts.
+#
+# You may use the command line option '-S' to verify your virtual host
+# configuration.
+
+#
+# Use name-based virtual hosting.
+#
+##NameVirtualHost *:80
+#
+# VirtualHost example:
+# Almost any Apache directive may go into a VirtualHost container.
+# The first VirtualHost section is used for all requests that do not
+# match a ##ServerName or ##ServerAlias in any <VirtualHost> block.
+#
+<VirtualHost *:80>
+    ProxyPreserveHost On
+	ServerName peluches.turbinux.com
+	ServerAlias www.peluches.turbinux.com
+	ProxyPass / http://192.168.0.150:9191/
+	ProxyPassReverse / http://192.168.0.150:9191/
+</VirtualHost>
+
+<VirtualHost *:80>
+    ProxyPreserveHost On
+	ServerName deportextil2016.turbinux.com
+	ServerAlias www.deportextil2016.turbinux.com
+	ProxyPass / http://192.168.0.100:8282/
+	ProxyPassReverse / http://192.168.0.100:8282/
+</VirtualHost>
+
+<VirtualHost *:80>
+    ProxyPreserveHost On
+	ServerName bb.turbinux.com
+	ServerAlias www.bb.turbinux.com
+	ProxyPass / http://192.168.0.100:8283/
+	ProxyPassReverse / http://192.168.0.100:8283/
+</VirtualHost>
+
+<VirtualHost *:80>
+    ProxyPreserveHost On
+	ServerName cerveria.turbinux.com
+	ServerAlias www.cerveria.turbinux.com
+	ProxyPass / http://192.168.0.100:8284/
+	ProxyPassReverse / http://192.168.0.100:8284/
+</VirtualHost>
+
+<VirtualHost *:80>
+    ProxyPreserveHost On
+	ServerName dalitex.turbinux.com
+	ServerAlias www.dalitex.turbinux.com
+	ProxyPass / http://192.168.0.100:8285/
+	ProxyPassReverse / http://192.168.0.100:8285/
+</VirtualHost>
+
+<VirtualHost *:80>
+    ProxyPreserveHost On
+	ServerName jalitex.turbinux.com
+	ServerAlias www.jalitex.turbinux.com
+	ProxyPass / http://192.168.0.100:8286/
+	ProxyPassReverse / http://192.168.0.100:8286/
+</VirtualHost>
+
+<VirtualHost *:80>
+    ProxyPreserveHost On
+	ServerName deportextilhistorico.turbinux.com
+	ServerAlias www.deportextilhistorico.turbinux.com
+	ProxyPass / http://192.168.0.100:8287/
+	ProxyPassReverse / http://192.168.0.100:8287/
+</VirtualHost>
+
+<VirtualHost *:80>
+    ProxyPreserveHost On
+	ServerName facturacion.turbinux.com
+	ServerAlias www.facturacion.turbinux.com
+	ProxyPass / http://192.168.0.100:8288/
+	ProxyPassReverse / http://f192.168.0.100:8288/
+</VirtualHost>
+
+<VirtualHost *:80>
+    ProxyPreserveHost On
+	ServerName hacker.turbinux.com
+	ServerAlias www.hacker.turbinux.com
+	ProxyPass / http://192.168.0.150:9090/
+	ProxyPassReverse / http://192.168.0.150:9090/
+</VirtualHost>
+
+<VirtualHost *:80>
+    ProxyPreserveHost On
+	ServerName luciana.turbinux.com
+	ServerAlias www.luciana.turbinux.com
+	ProxyPass / http://192.168.0.100:8290/
+	ProxyPassReverse / http://192.168.0.100:8290/
+</VirtualHost>
+
+<VirtualHost *:80>
+    ProxyPreserveHost On
+	ServerName marypily.com
+	ServerAlias www.marypily.com
+	ProxyPass / http://192.168.0.100:8291/
+	ProxyPassReverse / http://192.168.0.100:8291/
+</VirtualHost>
+
+<VirtualHost *:80>
+    ProxyPreserveHost On
+	ServerName arafelinternacional.com
+	ServerAlias www.arafelinternacional.com
+	ProxyPass / http://192.168.0.100:8292/
+	ProxyPassReverse / http://192.168.0.100:8292/
+</VirtualHost>
+
+<VirtualHost *:80>
+    ProxyPreserveHost On
+	ServerName deportextil.com
+	ServerAlias www.deportextil.com
+	ProxyPass / http://192.168.0.99:83/deportextil/
+	ProxyPassReverse / http://192.168.0.99:83/deportextil/
+</VirtualHost>
+
+<VirtualHost *:80>
+    ProxyPreserveHost On
+	ServerName prueba.deportextil.com
+	ServerAlias www.prueba.deportextil.com
+	ProxyPass / http://192.168.0.99:83/prueba/
+	ProxyPassReverse / http://192.168.0.99:83/prueba/
+</VirtualHost>
+
+<VirtualHost *:80>
+    ProxyPreserveHost On
+	ServerName loggfire.com
+	ServerAlias www.loggfire.com
+	ProxyPass / http://192.168.0.110:8294/
+	ProxyPassReverse / http://192.168.0.110:8294/
+</VirtualHost>
+
+<VirtualHost *:80>
+    ProxyPreserveHost On
+	ServerName peluches-santisima.com
+	ServerAlias www.peluches-santisima.com
+	ProxyPass / http://192.168.0.99:83/santisima/
+	ProxyPassReverse / http://192.168.0.99:83/santisima/
+</VirtualHost>
+
+<VirtualHost *:80>
+    ProxyPreserveHost On
+	ServerName turbinux.com
+	ServerAlias www.turbinux.com
+	ProxyPass / http://192.168.0.100:8296/
+	ProxyPassReverse / http://192.168.0.100:8296/
+</VirtualHost>
+
+<VirtualHost *:80>
+    ProxyPreserveHost On
+	ServerName capitaltextil.turbinux.com
+	ServerAlias www.capitaltextil.turbinux.com
+	ProxyPass / http://192.168.0.100:8298/
+	ProxyPassReverse / http://192.168.0.100:8298/
+</VirtualHost>
+
+<VirtualHost *:80>
+    ProxyPreserveHost On
+	ServerName sutexa.turbinux.com
+	ServerAlias www.sutexa.turbinux.com
+	ProxyPass / http://192.168.0.100:8299/
+	ProxyPassReverse / http://192.168.0.100:8299/
+</VirtualHost>
+
+<VirtualHost *:80>
+    ProxyPreserveHost On
+	ServerName terpel.turbinux.com
+	ServerAlias www.terpel.turbinux.com
+	ProxyPass / http://192.168.0.100:8300/
+	ProxyPassReverse / http://192.168.0.100:8300/
+</VirtualHost>
+
+<VirtualHost *:80>
+    ProxyPreserveHost On
+	ServerName turbinux.turbinux.com
+	ServerAlias www.turbinux.turbinux.com
+	ProxyPass / http://192.168.0.100:8301/
+	ProxyPassReverse / http://192.168.0.100:8301/
+</VirtualHost>
+
+<VirtualHost *:80>
+    ProxyPreserveHost On
+	ServerName sabercomer.turbinux.com
+	ServerAlias www.sabercomer.turbinux.com
+	ProxyPass / http://192.168.0.100:8302/
+	ProxyPassReverse / http://192.168.0.100:8302/
+</VirtualHost>
+
+<VirtualHost *:80>
+    ProxyPreserveHost On
+	ServerName nanotex.turbinux.com
+	ServerAlias www.nanotex.turbinux.com
+	ProxyPass / http://192.168.0.100:8303/
+	ProxyPassReverse / http://192.168.0.100:8303/
+</VirtualHost>
