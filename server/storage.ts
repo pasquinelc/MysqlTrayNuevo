@@ -85,8 +85,8 @@ export class DatabaseStorage implements IStorage {
       .from(backupLogs)
       .where(
         and(
-          sql`DATE(${backupLogs.startTime}) >= DATE(${startDate})`,
-          sql`DATE(${backupLogs.startTime}) <= DATE(${endDate})`
+          sql`${backupLogs.startTime} >= ${startDate}`,
+          sql`${backupLogs.startTime} < DATE_ADD(${endDate}, INTERVAL 1 DAY)`
         )
       )
       .orderBy(sql`${backupLogs.startTime} DESC`);
