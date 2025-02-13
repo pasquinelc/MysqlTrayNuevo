@@ -67,7 +67,7 @@ export async function sendBackupNotification(logs: BackupLog[], config: BackupCo
     const sizeInMB = (totalSize / (1024 * 1024)).toFixed(2);
 
     const html = `
-      <h2>Resumen de Respaldos MySQL</h2>
+      <h2>Resumen de Respaldos MySQL Turbinux</h2>
       <p>Configuración: ${config.name}</p>
       <p>Total de bases de datos: ${logs.length}</p>
       <p>Exitosos: ${successful.length}</p>
@@ -127,7 +127,7 @@ export async function sendDailyReport(logs: BackupLog[]) {
     const failed = logs.filter(l => l.status === 'failed').length;
 
     const html = `
-      <h2>Reporte Diario de Respaldos</h2>
+      <h2>Reporte Diario de Respaldos Turbinux</h2>
       <p>Total de respaldos: ${logs.length}</p>
       <p>Exitosos: ${successful}</p>
       <p>Fallidos: ${failed}</p>
