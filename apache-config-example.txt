@@ -1,22 +1,27 @@
 <VirtualHost *:80>
     ProxyPreserveHost On
-    ServerName backups.turbinux.com
-    ServerAlias www.backups.turbinux.com
-    
-    # Proxy all requests to Node.js application
-    ProxyPass / http://SERVER_IP:5000/
-    ProxyPassReverse / http://SERVER_IP:5000/
-    
+    ServerName backup.turbinux.com
+    ServerAlias www.backup.turbinux.com
+
+    # Proxy all requests to Node.js application running on the other server
+    ProxyPass / http://SERVER-NODE-IP:5000/
+    ProxyPassReverse / http://SERVER-NODE-IP:5000/
+
     # Enable required Apache modules:
     # a2enmod proxy
     # a2enmod proxy_http
-    
+    # a2enmod headers
+
     # Additional security headers
     Header always set X-Frame-Options "SAMEORIGIN"
     Header always set X-XSS-Protection "1; mode=block"
     Header always set X-Content-Type-Options "nosniff"
-    
+
     # Logging configuration
-    ErrorLog ${APACHE_LOG_DIR}/backups-error.log
-    CustomLog ${APACHE_LOG_DIR}/backups-access.log combined
+    ErrorLog ${APACHE_LOG_DIR}/backup-error.log
+    CustomLog ${APACHE_LOG_DIR}/backup-access.log combined
 </VirtualHost>
+
+# Nota: Reemplaza SERVER-NODE-IP con la IP del servidor donde instalaste Node.js
+# Por ejemplo, si Node.js está en 192.168.0.100, quedaría:
+# ProxyPass / http://192.168.0.100:5000/

@@ -1,39 +1,45 @@
-DATABASE_URL=mysql://usuario:contraseña@IP-MYSQL:3306/backups
-```
+3. Abre una terminal (CMD o PowerShell) como administrador y navega a la carpeta del proyecto
 
-4. Abre una terminal (CMD o PowerShell) como administrador
-
-5. Navega a la carpeta del proyecto y ejecuta:
-```bash
+4. Ejecuta los siguientes comandos para instalar y compilar:
+```cmd
 npm install
 npm run build
 ```
 
-6. Para iniciar el servidor en modo producción:
-```bash
-npm start
+5. Para iniciar el servidor, usa:
+```cmd
+start.bat
 ```
 
-## Pasos de instalación
-
-1. Crea una carpeta para el proyecto en el servidor Windows
-
-2. Copia todos los archivos necesarios listados arriba a esa carpeta
-
-
-3. Crea un archivo `.env` con la siguiente configuración:
-```env
-DATABASE_URL=mysql://usuario:contraseña@IP-MYSQL:3306/backups
+Nota: Si prefieres usar PowerShell, también puedes iniciar el servidor con:
+```powershell
+$env:NODE_ENV="production"; node dist/index.js
 ```
 
-4. Abre una terminal (CMD o PowerShell) como administrador
+## Configuración Distribuida
 
-5. Navega a la carpeta del proyecto y ejecuta:
-```bash
-npm install
-npm run build
+### Servidor MySQL (XAMPP)
+1. Asegúrate de que MySQL esté escuchando en todas las interfaces:
+   - Edita my.ini en XAMPP
+   - Cambia bind-address a 0.0.0.0
+   - Reinicia MySQL
+
+2. Crea un usuario con acceso remoto:
+```sql
+CREATE USER 'backup_user'@'%' IDENTIFIED BY 'tu_contraseña';
+GRANT ALL PRIVILEGES ON backups.* TO 'backup_user'@'%';
+FLUSH PRIVILEGES;
 ```
 
-6. Para iniciar el servidor en modo producción:
+### Servidor Node.js (con GlassFish)
+1. Instala Node.js 20 o superior
+2. Copia los archivos del proyecto
+3. Crea el archivo .env con la IP correcta del servidor MySQL
+4. Ejecuta start.bat
+
+### Servidor Web (XAMPP)
+1. Habilita los módulos necesarios en Apache:
 ```bash
-npm start
+a2enmod proxy
+a2enmod proxy_http
+a2enmod headers
