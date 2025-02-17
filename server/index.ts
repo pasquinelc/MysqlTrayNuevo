@@ -6,6 +6,7 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Middleware para logging
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -39,27 +40,52 @@ app.use((req, res, next) => {
 (async () => {
   const server = registerRoutes(app);
 
+  // Manejo de errores global
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
-
+    console.error('Error en la aplicación:', err);
     res.status(status).json({ message });
-    throw err;
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client
-  const PORT = 5000;
-  server.listen(PORT, "0.0.0.0", () => {
-    log(`serving on port ${PORT}`);
-  });
+  // Función para intentar iniciar el servidor
+  const startServer = (port: number) => {
+    return new Promise((resolve, reject) => {
+      server.listen(port, "0.0.0.0")
+        .once('error', (error: any) => {
+          if (error.code === 'EADDRINUSE') {
+            console.error(`Puerto ${port} en uso, intentando con puerto alternativo...`);
+            resolve(false);
+          } else {
+            console.error('Error al iniciar servidor:', error);
+            reject(error);
+          }
+        })
+        .once('listening', () => {
+          console.log(`Servidor iniciado en http://0.0.0.0:${port}`);
+          resolve(true);
+        });
+    });
+  };
+
+  // Intentar puertos alternativos si el 5000 está en uso
+  const ports = [5000, 5001, 5002, 5003];
+  for (const port of ports) {
+    try {
+      const success = await startServer(port);
+      if (success) {
+        log(`Servidor corriendo en puerto ${port}`);
+        break;
+      }
+    } catch (error) {
+      console.error(`Error fatal al intentar puerto ${port}:`, error);
+      process.exit(1);
+    }
+  }
 })();
