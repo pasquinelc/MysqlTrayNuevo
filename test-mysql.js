@@ -2,15 +2,15 @@
 import mysql from 'mysql2/promise';
 
 const config = {
-  host: process.env.MYSQL_HOST || '192.168.0.99',
-  port: parseInt(process.env.MYSQL_PORT || '3349'),
-  user: process.env.MYSQL_USER || 'root2',
-  password: process.env.MYSQL_PASSWORD || 'pacman',
+  host: process.env.MYSQL_HOST,
+  port: parseInt(process.env.MYSQL_PORT || '3306'),
+  user: process.env.MYSQL_USER,
+  password: process.env.MYSQL_PASSWORD,
   database: 'backups',
   connectTimeout: 30000,
 };
 
-console.log('Testing MySQL connection with config:', {
+console.log('Probando conexión MySQL con configuración:', {
   host: config.host,
   port: config.port,
   user: config.user,
@@ -19,19 +19,19 @@ console.log('Testing MySQL connection with config:', {
 
 async function testConnection() {
   try {
-    console.log('Attempting to connect to MySQL...');
+    console.log('Intentando conectar a MySQL...');
     const connection = await mysql.createConnection(config);
-    console.log('Successfully connected to MySQL!');
-    
-    console.log('Testing simple query...');
+    console.log('¡Conexión exitosa a MySQL!');
+
+    console.log('Probando consulta simple...');
     const [result] = await connection.execute('SELECT 1');
-    console.log('Query successful:', result);
-    
+    console.log('Consulta exitosa:', result);
+
     await connection.end();
-    console.log('Connection closed successfully');
+    console.log('Conexión cerrada correctamente');
     return true;
   } catch (error) {
-    console.error('Error connecting to MySQL:', {
+    console.error('Error conectando a MySQL:', {
       message: error.message,
       code: error.code,
       errno: error.errno,
