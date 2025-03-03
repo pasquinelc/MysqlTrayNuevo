@@ -24,6 +24,10 @@ for /f "tokens=1 delims=." %%I in ("!NODE_VERSION!") do (
     )
 )
 
+:: Agregar MySQL al PATH
+set MYSQL_PATH="C:\Program Files\MySQL\MySQL Server 8.0\bin"
+set PATH=%MYSQL_PATH%;%PATH%
+
 :: Verificar el archivo .env
 if not exist .env (
     echo Error: No se encuentra el archivo .env
