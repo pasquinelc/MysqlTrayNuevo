@@ -4,6 +4,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { testConnection } from "./db";
 import path, { dirname } from "path";
 import { fileURLToPath } from "url";
+import fs from 'fs/promises';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -111,8 +112,18 @@ app.use((req, res, next) => {
         console.log("✅ Vite configurado correctamente");
       } else {
         console.log("🔧 Configurando entorno de producción...");
-        serveStatic(app);
-        console.log("✅ Archivos estáticos configurados correctamente");
+        console.log("📁 Verificando directorio de build:", path.resolve(__dirname, "../dist/public"));
+
+        // Verificar si el directorio existe antes de configurar archivos estáticos
+        try {
+          await fs.access(path.resolve(__dirname, "../dist/public"));
+          console.log("✅ Directorio de build encontrado");
+          serveStatic(app);
+          console.log("✅ Archivos estáticos configurados correctamente");
+        } catch (error) {
+          console.error("❌ Error: El directorio de build no existe. Por favor, ejecute 'npm run build' primero");
+          process.exit(1);
+        }
       }
     } catch (error) {
       console.error("❌ Error durante la configuración del entorno:", error);
