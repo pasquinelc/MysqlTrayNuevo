@@ -81,38 +81,53 @@ app.use((req, res, next) => {
 
 // Función asíncrona para iniciar la aplicación
 (async () => {
-  console.log("🔄 Probando conexión a MySQL...");
+  try {
+    console.log("🔄 Probando conexión a MySQL...");
 
-  const isDbConnected = await testConnection();
-  if (!isDbConnected) {
-    console.error("❌ Error: No se pudo conectar a MySQL. Cerrando la aplicación.");
+    const isDbConnected = await testConnection();
+    if (!isDbConnected) {
+      console.error("❌ Error: No se pudo conectar a MySQL. Cerrando la aplicación.");
+      process.exit(1);
+    }
+
+    console.log("✅ Conexión a MySQL exitosa. Iniciando servidor Express...");
+
+    // Registrar rutas
+    const server = registerRoutes(app);
+
+    // Manejo de errores global
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      const status = err.status || err.statusCode || 500;
+      const message = err.message || "Internal Server Error";
+      console.error("❌ Error en la aplicación:", err);
+      res.status(status).json({ message });
+    });
+
+    // Configurar entorno de desarrollo o producción
+    try {
+      if (app.get("env") === "development") {
+        console.log("🔧 Configurando entorno de desarrollo...");
+        await setupVite(app, server);
+        console.log("✅ Vite configurado correctamente");
+      } else {
+        console.log("🔧 Configurando entorno de producción...");
+        serveStatic(app);
+        console.log("✅ Archivos estáticos configurados correctamente");
+      }
+    } catch (error) {
+      console.error("❌ Error durante la configuración del entorno:", error);
+      process.exit(1);
+    }
+
+    // Puerto fijo en 5000 como indican las instrucciones
+    const PORT = 5000;
+    server.listen(PORT, "0.0.0.0", () => {
+      console.log(`✅ Servidor iniciado en http://0.0.0.0:${PORT}`);
+      log(`Servidor corriendo en puerto ${PORT}`);
+    });
+
+  } catch (error) {
+    console.error("❌ Error fatal durante el inicio del servidor:", error);
     process.exit(1);
   }
-
-  console.log("✅ Conexión a MySQL exitosa. Iniciando servidor Express...");
-
-  // Registrar rutas
-  const server = registerRoutes(app);
-
-  // Manejo de errores global
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-    console.error("❌ Error en la aplicación:", err);
-    res.status(status).json({ message });
-  });
-
-  // Configurar entorno de desarrollo o producción
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-  }
-
-  // Puerto fijo en 5100 como solicitado por el usuario
-  const PORT = 5100;
-  server.listen(PORT, "0.0.0.0", () => {
-    console.log(`✅ Servidor iniciado en http://0.0.0.0:${PORT}`);
-    log(`Servidor corriendo en puerto ${PORT}`);
-  });
 })();
