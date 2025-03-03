@@ -31,15 +31,9 @@ const poolConfig = {
   enableKeepAlive: true,
   keepAliveInitialDelay: 0,
   multipleStatements: true,
-  connectTimeout: 30000, // 30s timeout
-  timezone: 'Z', // ✅ Corregir problema de zona horaria
+  connectTimeout: 30000,
+  timezone: 'Z',
 };
-
-// ✅ Confirmar configuración antes de conectar
-console.log("✅ MySQL Configuration:", {
-  ...poolConfig,
-  password: '********'
-});
 
 // 📌 Crear conexión a MySQL
 const poolConnection = mysql.createPool(poolConfig);
@@ -56,25 +50,8 @@ export const db = drizzle(poolConnection, { schema, mode: "default" });
 export async function testConnection(): Promise<boolean> {
   try {
     console.log("🔄 Testing MySQL connection...");
-    console.log(`🔹 Host: ${poolConfig.host}`);
-    console.log(`🔹 Port: ${poolConfig.port}`);
-    console.log(`🔹 User: ${poolConfig.user}`);
-
-    const connection = await mysql.createConnection({
-      ...poolConfig,
-      timeout: 10000, // Reducir timeout para prueba inicial
-    });
-
-    console.log("🔄 Intentando conectar...");
-    await connection.connect();
-    console.log("✅ MySQL connection successful");
-
-    // 🔎 Prueba de consulta
-    console.log("🔄 Probando consulta simple...");
-    const [result] = await connection.execute("SELECT 1");
-    console.log("✅ MySQL query test successful:", result);
-
-    await connection.end();
+    const [result] = await poolConnection.execute("SELECT 1");
+    console.log("✅ MySQL connection successful:", result);
     return true;
   } catch (error: any) {
     console.error("❌ MySQL connection failed:", {

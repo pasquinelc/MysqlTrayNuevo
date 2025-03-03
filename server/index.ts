@@ -4,47 +4,11 @@ import { setupVite, serveStatic, log } from "./vite";
 import { testConnection } from "./db";
 import path, { dirname } from "path";
 import { fileURLToPath } from "url";
-import fs from 'fs/promises';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
-
-// En producción, servir archivos estáticos primero
-if (app.get("env") !== "development") {
-  const distPath = path.resolve(__dirname, "../dist/public");
-  console.log("📁 Sirviendo archivos estáticos desde:", distPath);
-
-  // Middleware para debug de archivos estáticos antes de servirlos
-  app.use((req, res, next) => {
-    console.log(`🔍 Solicitud de archivo recibida: ${req.path}`);
-    next();
-  });
-
-  // Servir archivos estáticos con opciones específicas
-  app.use(express.static(distPath, {
-    maxAge: '1h',
-    etag: true,
-    lastModified: true,
-    setHeaders: (res, path) => {
-      if (path.endsWith('.css')) {
-        res.setHeader('Content-Type', 'text/css');
-      }
-      if (path.endsWith('.js')) {
-        res.setHeader('Content-Type', 'application/javascript');
-      }
-    }
-  }));
-
-  // Middleware para debug después de servir archivos estáticos
-  app.use((req, res, next) => {
-    if (!res.headersSent) {
-      console.log(`⚠️ Archivo no encontrado: ${req.path}`);
-    }
-    next();
-  });
-}
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -105,29 +69,12 @@ app.use((req, res, next) => {
     });
 
     // Configurar entorno de desarrollo o producción
-    try {
-      if (app.get("env") === "development") {
-        console.log("🔧 Configurando entorno de desarrollo...");
-        await setupVite(app, server);
-        console.log("✅ Vite configurado correctamente");
-      } else {
-        console.log("🔧 Configurando entorno de producción...");
-        console.log("📁 Verificando directorio de build:", path.resolve(__dirname, "../dist/public"));
-
-        // Verificar si el directorio existe antes de configurar archivos estáticos
-        try {
-          await fs.access(path.resolve(__dirname, "../dist/public"));
-          console.log("✅ Directorio de build encontrado");
-          serveStatic(app);
-          console.log("✅ Archivos estáticos configurados correctamente");
-        } catch (error) {
-          console.error("❌ Error: El directorio de build no existe. Por favor, ejecute 'npm run build' primero");
-          process.exit(1);
-        }
-      }
-    } catch (error) {
-      console.error("❌ Error durante la configuración del entorno:", error);
-      process.exit(1);
+    if (app.get("env") === "development") {
+      console.log("🔧 Configurando entorno de desarrollo...");
+      await setupVite(app, server);
+    } else {
+      console.log("🔧 Configurando entorno de producción...");
+      serveStatic(app);
     }
 
     // Puerto fijo en 5000 como indican las instrucciones
