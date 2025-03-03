@@ -1,7 +1,8 @@
 import express, { Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { testConnection } from "./db"; // 🔥 Asegurar que la DB se carga antes de Express
+import { testConnection } from "./db";
+import path from "path";
 
 const app = express();
 app.use(express.json());
@@ -38,25 +39,22 @@ app.use((req, res, next) => {
   next();
 });
 
-// 🔥 Función asíncrona para iniciar la aplicación
+// Función asíncrona para iniciar la aplicación
 (async () => {
   console.log("🔄 Probando conexión a MySQL...");
 
-  // 🚀 Probar conexión antes de iniciar el servidor
   const isDbConnected = await testConnection();
   if (!isDbConnected) {
-    console.error(
-      "❌ Error: No se pudo conectar a MySQL. Cerrando la aplicación.",
-    );
+    console.error("❌ Error: No se pudo conectar a MySQL. Cerrando la aplicación.");
     process.exit(1);
   }
 
   console.log("✅ Conexión a MySQL exitosa. Iniciando servidor Express...");
 
-  // 📌 Registrar rutas
+  // Registrar rutas
   const server = registerRoutes(app);
 
-  // 🚀 Manejo de errores global
+  // Manejo de errores global
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
@@ -64,14 +62,49 @@ app.use((req, res, next) => {
     res.status(status).json({ message });
   });
 
-  // 📌 Configurar entorno de desarrollo o producción
+  // En producción, servir archivos estáticos primero
+  if (app.get("env") !== "development") {
+    const distPath = path.resolve(__dirname, "../dist/public");
+    console.log("📁 Sirviendo archivos estáticos desde:", distPath);
+
+    // Middleware para debug de archivos estáticos antes de servirlos
+    app.use((req, res, next) => {
+      console.log(`🔍 Solicitud de archivo recibida: ${req.path}`);
+      next();
+    });
+
+    // Servir archivos estáticos con opciones específicas
+    app.use(express.static(distPath, {
+      maxAge: '1h',
+      etag: true,
+      lastModified: true,
+      setHeaders: (res, path) => {
+        if (path.endsWith('.css')) {
+          res.setHeader('Content-Type', 'text/css');
+        }
+        if (path.endsWith('.js')) {
+          res.setHeader('Content-Type', 'application/javascript');
+        }
+      }
+    }));
+
+    // Middleware para debug después de servir archivos estáticos
+    app.use((req, res, next) => {
+      if (!res.headersSent) {
+        console.log(`⚠️ Archivo no encontrado: ${req.path}`);
+      }
+      next();
+    });
+  }
+
+  // Configurar entorno de desarrollo o producción
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
-  // 🔥 PUERTO FIJO EN 5100
+  // Puerto fijo en 5100 como solicitado por el usuario
   const PORT = 5100;
   server.listen(PORT, "0.0.0.0", () => {
     console.log(`✅ Servidor iniciado en http://0.0.0.0:${PORT}`);
