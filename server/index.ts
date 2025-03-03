@@ -2,9 +2,49 @@ import express, { Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { testConnection } from "./db";
-import path from "path";
+import path, { dirname } from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express();
+
+// En producción, servir archivos estáticos primero
+if (app.get("env") !== "development") {
+  const distPath = path.resolve(__dirname, "../dist/public");
+  console.log("📁 Sirviendo archivos estáticos desde:", distPath);
+
+  // Middleware para debug de archivos estáticos antes de servirlos
+  app.use((req, res, next) => {
+    console.log(`🔍 Solicitud de archivo recibida: ${req.path}`);
+    next();
+  });
+
+  // Servir archivos estáticos con opciones específicas
+  app.use(express.static(distPath, {
+    maxAge: '1h',
+    etag: true,
+    lastModified: true,
+    setHeaders: (res, path) => {
+      if (path.endsWith('.css')) {
+        res.setHeader('Content-Type', 'text/css');
+      }
+      if (path.endsWith('.js')) {
+        res.setHeader('Content-Type', 'application/javascript');
+      }
+    }
+  }));
+
+  // Middleware para debug después de servir archivos estáticos
+  app.use((req, res, next) => {
+    if (!res.headersSent) {
+      console.log(`⚠️ Archivo no encontrado: ${req.path}`);
+    }
+    next();
+  });
+}
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -61,41 +101,6 @@ app.use((req, res, next) => {
     console.error("❌ Error en la aplicación:", err);
     res.status(status).json({ message });
   });
-
-  // En producción, servir archivos estáticos primero
-  if (app.get("env") !== "development") {
-    const distPath = path.resolve(__dirname, "../dist/public");
-    console.log("📁 Sirviendo archivos estáticos desde:", distPath);
-
-    // Middleware para debug de archivos estáticos antes de servirlos
-    app.use((req, res, next) => {
-      console.log(`🔍 Solicitud de archivo recibida: ${req.path}`);
-      next();
-    });
-
-    // Servir archivos estáticos con opciones específicas
-    app.use(express.static(distPath, {
-      maxAge: '1h',
-      etag: true,
-      lastModified: true,
-      setHeaders: (res, path) => {
-        if (path.endsWith('.css')) {
-          res.setHeader('Content-Type', 'text/css');
-        }
-        if (path.endsWith('.js')) {
-          res.setHeader('Content-Type', 'application/javascript');
-        }
-      }
-    }));
-
-    // Middleware para debug después de servir archivos estáticos
-    app.use((req, res, next) => {
-      if (!res.headersSent) {
-        console.log(`⚠️ Archivo no encontrado: ${req.path}`);
-      }
-      next();
-    });
-  }
 
   // Configurar entorno de desarrollo o producción
   if (app.get("env") === "development") {
