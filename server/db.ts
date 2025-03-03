@@ -2,14 +2,19 @@ import { drizzle } from 'drizzle-orm/mysql2';
 import mysql from 'mysql2/promise';
 import * as schema from "@shared/schema";
 
-// Pool configuration with better error handling and timezone
+if (!process.env.DATABASE_URL) {
+  console.error('ERROR: DATABASE_URL environment variable is not set!');
+  process.exit(1);
+}
+
+// Parse DATABASE_URL for connection config
+const url = new URL(process.env.DATABASE_URL);
 const poolConfig = {
-  host: process.env.MYSQL_HOST || 'localhost',
-  port: parseInt(process.env.MYSQL_PORT || '3306'),
-  user: process.env.MYSQL_USER || 'root',
-  password: process.env.MYSQL_PASSWORD || '',
-  database: 'backups',
-  // Remove timezone setting to avoid warning
+  host: url.hostname,
+  port: parseInt(url.port),
+  user: url.username,
+  password: url.password,
+  database: url.pathname.replace('/', ''),
   waitForConnections: true,
   connectionLimit: 10,
   maxIdle: 10,
@@ -27,12 +32,6 @@ console.log('MySQL Configuration:', {
   user: poolConfig.user,
   database: poolConfig.database,
 });
-
-if (!process.env.MYSQL_HOST || !process.env.MYSQL_USER || !process.env.MYSQL_PASSWORD) {
-  console.error('ERROR: Required MySQL environment variables are not set!');
-  console.error('Please ensure MYSQL_HOST, MYSQL_USER, and MYSQL_PASSWORD are set.');
-  process.exit(1);
-}
 
 const poolConnection = mysql.createPool(poolConfig);
 
@@ -53,14 +52,10 @@ export const db = drizzle(poolConnection, { schema, mode: 'default' });
 export async function testConnection() {
   try {
     console.log('Testing MySQL connection...');
-    console.log(`Host: ${process.env.MYSQL_HOST}`);
-    console.log(`Port: ${process.env.MYSQL_PORT}`);
+    console.log(`Host: ${poolConfig.host}`);
+    console.log(`Port: ${poolConfig.port}`);
 
-    const connection = await mysql.createConnection({
-      ...poolConfig,
-      connectTimeout: 30000
-    });
-
+    const connection = await mysql.createConnection(poolConfig);
     await connection.connect();
     console.log('MySQL connection successful');
 
@@ -77,8 +72,8 @@ export async function testConnection() {
       errno: error.errno,
       sqlState: error.sqlState,
       sqlMessage: error.sqlMessage,
-      host: process.env.MYSQL_HOST,
-      port: process.env.MYSQL_PORT,
+      host: poolConfig.host,
+      port: poolConfig.port,
     });
     return false;
   }
