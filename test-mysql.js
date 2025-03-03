@@ -23,9 +23,9 @@ async function testConnection() {
     const connection = await mysql.createConnection(config);
     console.log('¡Conexión exitosa a MySQL!');
 
-    console.log('Probando consulta simple...');
-    const [result] = await connection.execute('SELECT 1');
-    console.log('Consulta exitosa:', result);
+    console.log('Verificando tablas existentes...');
+    const [tables] = await connection.execute('SHOW TABLES FROM backups;');
+    console.log('Tablas encontradas:', tables);
 
     await connection.end();
     console.log('Conexión cerrada correctamente');

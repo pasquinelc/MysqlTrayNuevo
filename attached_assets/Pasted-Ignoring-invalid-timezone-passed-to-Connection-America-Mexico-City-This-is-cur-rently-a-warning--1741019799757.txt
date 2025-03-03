@@ -1,0 +1,36 @@
+Ignoring invalid timezone passed to Connection: America/Mexico_City. This is cur
+rently a warning, but in future versions of MySQL2, an error will be thrown if y
+ou pass an invalid configuration option to a Connection
+[2025-03-03 16:36:20] DEBUG Creating transport: nodemailer (6.10.0; +https://nod
+emailer.com/; SMTP/6.10.0[client:6.10.0])
+10:36:20 AM [express] serving on port 5000
+Error: Access denied for user 'root'@'localhost' (using password: NO)
+    at PromisePool.query (C:\Users\Administrator\Desktop\MysqlTray nuevo\node_mo
+dules\mysql2\lib\promise\pool.js:36:22)
+    at MySql2PreparedQuery.execute (file:///C:/Users/Administrator/Desktop/Mysql
+Tray%20nuevo/node_modules/drizzle-orm/mysql2/session.js:75:33)
+    at MySqlSelectBase.execute (file:///C:/Users/Administrator/Desktop/MysqlTray
+%20nuevo/node_modules/drizzle-orm/mysql-core/query-builders/select.js:746:27)
+    at MySqlSelectBase.then (file:///C:/Users/Administrator/Desktop/MysqlTray%20
+nuevo/node_modules/drizzle-orm/query-promise.js:21:17) {
+  code: 'ER_ACCESS_DENIED_ERROR',
+  errno: 1045,
+  sql: undefined,
+  sqlState: '28000',
+  sqlMessage: "Access denied for user 'root'@'localhost' (using password: NO)"
+}
+Error: Access denied for user 'root'@'localhost' (using password: NO)
+    at PromisePool.query (C:\Users\Administrator\Desktop\MysqlTray nuevo\node_mo
+dules\mysql2\lib\promise\pool.js:36:22)
+    at MySql2PreparedQuery.execute (file:///C:/Users/Administrator/Desktop/Mysql
+Tray%20nuevo/node_modules/drizzle-orm/mysql2/session.js:51:32)
+    at QueryPromise.execute (file:///C:/Users/Administrator/Desktop/MysqlTray%20
+nuevo/node_modules/drizzle-orm/mysql-core/query-builders/insert.js:114:27)
+    at QueryPromise.then (file:///C:/Users/Administrator/Desktop/MysqlTray%20nue
+vo/node_modules/drizzle-orm/query-promise.js:21:17) {
+  code: 'ER_ACCESS_DENIED_ERROR',
+  errno: 1045,
+  sql: undefined,
+  sqlState: '28000',
+  sqlMessage: "Access denied for user 'root'@'localhost' (using password: NO)"
+}
