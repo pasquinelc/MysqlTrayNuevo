@@ -1,5 +1,3 @@
-process.env.TZ = 'America/Mexico_City';
-
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs/promises';

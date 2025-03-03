@@ -37,7 +37,7 @@ if (!process.env.MYSQL_HOST || !process.env.MYSQL_USER || !process.env.MYSQL_PAS
 const poolConnection = mysql.createPool(poolConfig);
 
 // Add error handler to the pool
-poolConnection.on('error', (err) => {
+poolConnection.on('error', (err: any) => {
   console.error('Unexpected error on idle MySQL connection:', err);
   console.error('Error details:', {
     code: err.code,
@@ -70,7 +70,7 @@ export async function testConnection() {
 
     await connection.end();
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error('MySQL connection failed:', error);
     console.error('Error details:', {
       code: error.code,
