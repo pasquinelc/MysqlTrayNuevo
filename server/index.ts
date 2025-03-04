@@ -32,15 +32,12 @@ app.use((req, res, next) => {
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
-
       if (logLine.length > 80) {
         logLine = logLine.slice(0, 79) + "…";
       }
-
       log(logLine);
     }
   });
-
   next();
 });
 
@@ -48,7 +45,6 @@ app.use((req, res, next) => {
 (async () => {
   try {
     console.log("🔄 Probando conexión a MySQL...");
-
     const isDbConnected = await testConnection();
     if (!isDbConnected) {
       console.error("❌ Error: No se pudo conectar a MySQL. Cerrando la aplicación.");
@@ -68,14 +64,9 @@ app.use((req, res, next) => {
       res.status(status).json({ message });
     });
 
-    // Configurar entorno de desarrollo o producción
-    if (app.get("env") === "development") {
-      console.log("🔧 Configurando entorno de desarrollo...");
-      await setupVite(app, server);
-    } else {
-      console.log("🔧 Configurando entorno de producción...");
-      serveStatic(app);
-    }
+    // Forzar modo desarrollo temporalmente
+    console.log("🔧 Iniciando en modo desarrollo...");
+    await setupVite(app, server);
 
     // Puerto fijo en 5000 como indican las instrucciones
     const PORT = 5000;
